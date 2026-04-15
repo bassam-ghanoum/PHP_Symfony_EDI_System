@@ -49,6 +49,28 @@ final class ImportedFileMoverTest extends TestCase
         self::assertFileExists($result->importedDirectory.\DIRECTORY_SEPARATOR.'second.txt');
     }
 
+    public function testItIgnoresNonTxtFiles(): void
+    {
+        $filesystem = new Filesystem();
+        $inputDirectory = $this->workspaceDirectory.\DIRECTORY_SEPARATOR.'input';
+
+        $filesystem->mkdir($inputDirectory);
+        file_put_contents($inputDirectory.\DIRECTORY_SEPARATOR.'note.txt', 'text');
+        file_put_contents($inputDirectory.\DIRECTORY_SEPARATOR.'image.jpeg', 'binary');
+
+        $mover = new ImportedFileMover(
+            filesystem: $filesystem,
+            baseDirectory: $this->workspaceDirectory,
+        );
+
+        $result = $mover->moveFiles();
+
+        self::assertSame(1, $result->movedCount());
+        self::assertSame(['note.txt'], $result->movedFiles);
+        self::assertFileExists($result->importedDirectory.\DIRECTORY_SEPARATOR.'note.txt');
+        self::assertFileExists($result->inputDirectory.\DIRECTORY_SEPARATOR.'image.jpeg');
+    }
+
     public function testItCreatesMissingDirectoriesWhenTheyDoNotExist(): void
     {
         $mover = new ImportedFileMover(

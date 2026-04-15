@@ -19,3 +19,9 @@
 /public/assets/
 /assets/vendor/
 ###< symfony/asset-mapper ###
+
+/ImportedFiles/*
+/ImportedFiles/input/*
+!/ImportedFiles/input/.gitkeep
+/ImportedFiles/imported/*
+!/ImportedFiles/imported/.gitkeep

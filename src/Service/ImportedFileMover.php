@@ -66,7 +66,7 @@ final readonly class ImportedFileMover
 
             $path = $directory.\DIRECTORY_SEPARATOR.$entry;
 
-            if (is_file($path)) {
+            if (is_file($path) && $this->isTextFile($path)) {
                 $files[] = $path;
             }
         }
@@ -74,6 +74,11 @@ final readonly class ImportedFileMover
         sort($files);
 
         return $files;
+    }
+
+    private function isTextFile(string $path): bool
+    {
+        return strcasecmp(pathinfo($path, \PATHINFO_EXTENSION), 'txt') === 0;
     }
 
     private function buildUniqueDestinationPath(string $directory, string $filename): string
