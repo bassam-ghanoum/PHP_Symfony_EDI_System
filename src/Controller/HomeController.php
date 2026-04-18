@@ -10,9 +10,14 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class HomeController extends AbstractController
 {
-    #[Route(path: '/', name: 'app_home', methods: ['GET'])]
+    private const HOME_ROUTE_PATH = '/';
+    private const HOME_ROUTE_NAME = 'app_home';
+    private const HOME_TEMPLATE = 'home/index.html.twig';
+    private const GET_METHOD = 'GET';
+
+    #[Route(path: self::HOME_ROUTE_PATH, name: self::HOME_ROUTE_NAME, methods: [self::GET_METHOD])]
     public function __invoke(): Response
     {
-        return $this->render('home/index.html.twig');
+        return $this->render(self::HOME_TEMPLATE);
     }
 }

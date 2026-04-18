@@ -20,6 +20,8 @@ services:
     App\:
         resource: '../src/'
 
+    App\Service\EdifactInvoicParserInterface: '@App\Service\EdifactInvoicParser'
+
     App\Service\ImportedFileMover:
         bind:
             $baseDirectory: '%app.imported_files_directory%'

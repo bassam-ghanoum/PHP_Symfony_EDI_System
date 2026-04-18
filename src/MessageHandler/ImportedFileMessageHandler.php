@@ -5,15 +5,19 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\Message\ImportedFileMessage;
-use App\Service\EdifactInvoicParser;
+use App\Service\EdifactInvoicParserInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
 final readonly class ImportedFileMessageHandler
 {
+    private const FILE_PATH_CONTEXT_KEY = 'file_path';
+    private const NEXT_STEP_CONTEXT_KEY = 'next_step';
+    private const NEXT_STEP_MESSAGE = 'Continue INVOIC parsing implementation.';
+
     public function __construct(
-        private EdifactInvoicParser $edifactInvoicParser,
+        private EdifactInvoicParserInterface $edifactInvoicParser,
         private LoggerInterface $logger,
     ) {
     }
@@ -24,15 +28,15 @@ final readonly class ImportedFileMessageHandler
 
         if (!$result->isInvoic) {
             $this->logger->info($result->message, [
-                'file_path' => $result->filePath,
+                self::FILE_PATH_CONTEXT_KEY => $result->filePath,
             ]);
 
             return;
         }
 
         $this->logger->info($result->message, [
-            'file_path' => $result->filePath,
-            'next_step' => 'Continue INVOIC parsing implementation.',
+            self::FILE_PATH_CONTEXT_KEY => $result->filePath,
+            self::NEXT_STEP_CONTEXT_KEY => self::NEXT_STEP_MESSAGE,
         ]);
     }
 }

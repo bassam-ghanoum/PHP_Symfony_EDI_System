@@ -13,6 +13,20 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 final readonly class ImportedFileMover
 {
+    private const INPUT_DIRECTORY_NAME = 'input';
+    private const IMPORTED_DIRECTORY_NAME = 'imported';
+    private const IMPORTED_FILE_STATUS = 'imported';
+    private const PENDING_IMPORT_STATUS = 'pending_import';
+    private const IMPORTED_FILE_URL_PREFIX = '/ImportedFiles/imported/';
+    private const TIMESTAMP_FORMAT = 'Ymd_His';
+    private const FILENAME_SEPARATOR = '_';
+    private const UTF8_CHARSET = 'UTF-8';
+    private const ASCII_TRANSLITERATION_CHARSET = 'ASCII//TRANSLIT//IGNORE';
+    private const SANITIZE_FILENAME_PATTERN = '/[^A-Za-z0-9_-]+/';
+    private const SANITIZE_FILENAME_REPLACEMENT = '_';
+    private const FALLBACK_FILENAME = 'imported_file';
+    private const CURRENT_DIRECTORY_NAME = '.';
+    private const PARENT_DIRECTORY_NAME = '..';
     private const SUPPORTED_EXTENSIONS = ['txt', 'edi'];
 
     public function __construct(
@@ -30,8 +44,8 @@ final readonly class ImportedFileMover
 
     public function moveFiles(): ImportedFileMoveResult
     {
-        $inputDirectory = $this->baseDirectory.\DIRECTORY_SEPARATOR.'input';
-        $importedDirectory = $this->baseDirectory.\DIRECTORY_SEPARATOR.'imported';
+        $inputDirectory = $this->baseDirectory.\DIRECTORY_SEPARATOR.self::INPUT_DIRECTORY_NAME;
+        $importedDirectory = $this->baseDirectory.\DIRECTORY_SEPARATOR.self::IMPORTED_DIRECTORY_NAME;
 
         $this->filesystem->mkdir([$inputDirectory, $importedDirectory]);
 
@@ -49,7 +63,7 @@ final readonly class ImportedFileMover
             $this->filesystem->rename($sourcePath, $destinationPath, true);
 
             $incomingFile
-                ->setFileStatus('imported')
+                ->setFileStatus(self::IMPORTED_FILE_STATUS)
                 ->setUpdatedAt(new \DateTimeImmutable());
             $this->entityManager->flush();
 
@@ -80,7 +94,7 @@ final readonly class ImportedFileMover
         $files = [];
 
         foreach ($entries as $entry) {
-            if ($entry === '.' || $entry === '..') {
+            if ($entry === self::CURRENT_DIRECTORY_NAME || $entry === self::PARENT_DIRECTORY_NAME) {
                 continue;
             }
 
@@ -106,9 +120,9 @@ final readonly class ImportedFileMover
         $extension = pathinfo($filename, \PATHINFO_EXTENSION);
         $baseName = pathinfo($filename, \PATHINFO_FILENAME);
         $sanitizedBaseName = $this->sanitizeFilename($baseName);
-        $timestamp = (new \DateTimeImmutable())->format('Ymd_His');
+        $timestamp = (new \DateTimeImmutable())->format(self::TIMESTAMP_FORMAT);
 
-        $timestampedFilename = $sanitizedBaseName.'_'.$timestamp;
+        $timestampedFilename = $sanitizedBaseName.self::FILENAME_SEPARATOR.$timestamp;
 
         if ($extension !== '') {
             $timestampedFilename .= '.'.strtolower($extension);
@@ -119,17 +133,17 @@ final readonly class ImportedFileMover
 
     private function sanitizeFilename(string $filename): string
     {
-        $transliteratedFilename = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $filename);
+        $transliteratedFilename = iconv(self::UTF8_CHARSET, self::ASCII_TRANSLITERATION_CHARSET, $filename);
         $normalizedFilename = $transliteratedFilename !== false ? $transliteratedFilename : $filename;
-        $sanitizedFilename = preg_replace('/[^A-Za-z0-9_-]+/', '_', $normalizedFilename);
+        $sanitizedFilename = preg_replace(self::SANITIZE_FILENAME_PATTERN, self::SANITIZE_FILENAME_REPLACEMENT, $normalizedFilename);
 
         if ($sanitizedFilename === null) {
-            return 'imported_file';
+            return self::FALLBACK_FILENAME;
         }
 
         $sanitizedFilename = trim($sanitizedFilename, '_-');
 
-        return $sanitizedFilename !== '' ? $sanitizedFilename : 'imported_file';
+        return $sanitizedFilename !== '' ? $sanitizedFilename : self::FALLBACK_FILENAME;
     }
 
     private function createIncomingFileRecord(string $destinationPath, string $destinationFilename): IncomingFile
@@ -137,12 +151,12 @@ final readonly class ImportedFileMover
         $now = new \DateTimeImmutable();
         $incomingFile = (new IncomingFile())
             ->setFileName($destinationFilename)
-            ->setFileStatus('pending_import')
+            ->setFileStatus(self::PENDING_IMPORT_STATUS)
             ->setReceivedAt($now)
             ->setCreatedAt($now)
             ->setUpdatedAt($now)
             ->setFileType(strtolower((string) pathinfo($destinationPath, \PATHINFO_EXTENSION)))
-            ->setFileUrl('/ImportedFiles/imported/'.$destinationFilename);
+            ->setFileUrl(self::IMPORTED_FILE_URL_PREFIX.$destinationFilename);
 
         $this->entityManager->persist($incomingFile);
         $this->entityManager->flush();
@@ -163,7 +177,7 @@ final readonly class ImportedFileMover
         $counter = 1;
 
         do {
-            $candidate = $name.'_'.$counter;
+            $candidate = $name.self::FILENAME_SEPARATOR.$counter;
 
             if ($extension !== '') {
                 $candidate .= '.'.$extension;

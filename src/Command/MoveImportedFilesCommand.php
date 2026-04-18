@@ -12,11 +12,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
-    name: 'app:imported-files:move',
-    description: 'Moves supported imported files from /ImportedFiles/input to /ImportedFiles/imported.',
+    name: MoveImportedFilesCommand::COMMAND_NAME,
+    description: MoveImportedFilesCommand::COMMAND_DESCRIPTION,
 )]
 final class MoveImportedFilesCommand extends Command
 {
+    public const COMMAND_NAME = 'app:imported-files:move';
+    public const COMMAND_DESCRIPTION = 'Moves supported imported files from /ImportedFiles/input to /ImportedFiles/imported.';
+    private const SUCCESS_MESSAGE = 'Processed %d file(s) from "%s" to "%s".';
+
     public function __construct(
         private readonly ImportedFileMover $importedFileMover,
     ) {
@@ -29,7 +33,7 @@ final class MoveImportedFilesCommand extends Command
         $result = $this->importedFileMover->moveFiles();
 
         $io->success(\sprintf(
-            'Processed %d file(s) from "%s" to "%s".',
+            self::SUCCESS_MESSAGE,
             $result->movedCount(),
             $result->inputDirectory,
             $result->importedDirectory,
