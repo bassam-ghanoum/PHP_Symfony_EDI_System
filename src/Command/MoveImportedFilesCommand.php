@@ -13,7 +13,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'app:imported-files:move',
-    description: 'Moves files from /ImportedFiles/input to /ImportedFiles/imported.',
+    description: 'Moves supported imported files from /ImportedFiles/input to /ImportedFiles/imported.',
 )]
 final class MoveImportedFilesCommand extends Command
 {

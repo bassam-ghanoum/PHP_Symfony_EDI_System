@@ -4,13 +4,21 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Entity\IncomingFile;
+use App\Message\ImportedFileMessage;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 final readonly class ImportedFileMover
 {
+    private const SUPPORTED_EXTENSIONS = ['txt', 'edi'];
+
     public function __construct(
         private Filesystem $filesystem,
+        private MessageBusInterface $messageBus,
+        private EntityManagerInterface $entityManager,
         private string $baseDirectory,
     ) {
     }
@@ -28,21 +36,33 @@ final readonly class ImportedFileMover
         $this->filesystem->mkdir([$inputDirectory, $importedDirectory]);
 
         $movedFiles = [];
+        $movedFilePaths = [];
 
         foreach ($this->listFiles($inputDirectory) as $sourcePath) {
+            $destinationFilename = $this->buildTimestampedFilename(basename($sourcePath));
             $destinationPath = $this->buildUniqueDestinationPath(
                 $importedDirectory,
-                basename($sourcePath),
+                $destinationFilename,
             );
+            $incomingFile = $this->createIncomingFileRecord($destinationPath, basename($destinationPath));
 
             $this->filesystem->rename($sourcePath, $destinationPath, true);
+
+            $incomingFile
+                ->setFileStatus('imported')
+                ->setUpdatedAt(new \DateTimeImmutable());
+            $this->entityManager->flush();
+
             $movedFiles[] = basename($destinationPath);
+            $movedFilePaths[] = $destinationPath;
+            $this->messageBus->dispatch(new ImportedFileMessage($destinationPath));
         }
 
         return new ImportedFileMoveResult(
             inputDirectory: $inputDirectory,
             importedDirectory: $importedDirectory,
             movedFiles: $movedFiles,
+            movedFilePaths: $movedFilePaths,
         );
     }
 
@@ -66,7 +86,7 @@ final readonly class ImportedFileMover
 
             $path = $directory.\DIRECTORY_SEPARATOR.$entry;
 
-            if (is_file($path) && $this->isTextFile($path)) {
+            if (is_file($path) && $this->isSupportedImportedFile($path)) {
                 $files[] = $path;
             }
         }
@@ -76,9 +96,58 @@ final readonly class ImportedFileMover
         return $files;
     }
 
-    private function isTextFile(string $path): bool
+    private function isSupportedImportedFile(string $path): bool
     {
-        return strcasecmp(pathinfo($path, \PATHINFO_EXTENSION), 'txt') === 0;
+        return \in_array(strtolower((string) pathinfo($path, \PATHINFO_EXTENSION)), self::SUPPORTED_EXTENSIONS, true);
+    }
+
+    private function buildTimestampedFilename(string $filename): string
+    {
+        $extension = pathinfo($filename, \PATHINFO_EXTENSION);
+        $baseName = pathinfo($filename, \PATHINFO_FILENAME);
+        $sanitizedBaseName = $this->sanitizeFilename($baseName);
+        $timestamp = (new \DateTimeImmutable())->format('Ymd_His');
+
+        $timestampedFilename = $sanitizedBaseName.'_'.$timestamp;
+
+        if ($extension !== '') {
+            $timestampedFilename .= '.'.strtolower($extension);
+        }
+
+        return $timestampedFilename;
+    }
+
+    private function sanitizeFilename(string $filename): string
+    {
+        $transliteratedFilename = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $filename);
+        $normalizedFilename = $transliteratedFilename !== false ? $transliteratedFilename : $filename;
+        $sanitizedFilename = preg_replace('/[^A-Za-z0-9_-]+/', '_', $normalizedFilename);
+
+        if ($sanitizedFilename === null) {
+            return 'imported_file';
+        }
+
+        $sanitizedFilename = trim($sanitizedFilename, '_-');
+
+        return $sanitizedFilename !== '' ? $sanitizedFilename : 'imported_file';
+    }
+
+    private function createIncomingFileRecord(string $destinationPath, string $destinationFilename): IncomingFile
+    {
+        $now = new \DateTimeImmutable();
+        $incomingFile = (new IncomingFile())
+            ->setFileName($destinationFilename)
+            ->setFileStatus('pending_import')
+            ->setReceivedAt($now)
+            ->setCreatedAt($now)
+            ->setUpdatedAt($now)
+            ->setFileType(strtolower((string) pathinfo($destinationPath, \PATHINFO_EXTENSION)))
+            ->setFileUrl('/ImportedFiles/imported/'.$destinationFilename);
+
+        $this->entityManager->persist($incomingFile);
+        $this->entityManager->flush();
+
+        return $incomingFile;
     }
 
     private function buildUniqueDestinationPath(string $directory, string $filename): string
