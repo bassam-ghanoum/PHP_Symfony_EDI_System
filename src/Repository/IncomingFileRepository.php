@@ -9,7 +9,7 @@ use App\Entity\IncomingFile;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
-final class IncomingFileRepository  extends ServiceEntityRepository
+class IncomingFileRepository  extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {

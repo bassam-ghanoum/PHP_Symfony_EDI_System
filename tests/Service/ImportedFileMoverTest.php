@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service;
 
+use App\Dtos\IncomingFileDto;
 use App\Entity\IncomingFile;
 use App\Message\ImportedFileMessage;
+use App\Repository\IncomingFileRepository;
 use App\Service\ImportedFileMover;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Messenger\Envelope;
@@ -61,22 +62,29 @@ final class ImportedFileMoverTest extends TestCase
         file_put_contents($inputDirectory.\DIRECTORY_SEPARATOR.self::SECOND_TXT_FILENAME, self::SECOND_TXT_CONTENT);
 
         $persistedIncomingFiles = [];
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager
+        $incomingFile = new IncomingFile();
+        
+        $incomingFileRepository = $this->createMock(IncomingFileRepository::class);
+        $incomingFileRepository
             ->expects(self::exactly(2))
-            ->method('persist')
-            ->with(self::callback(static function (object $entity) use (&$persistedIncomingFiles): bool {
-                if (!$entity instanceof IncomingFile) {
-                    return false;
-                }
-
-                $persistedIncomingFiles[] = $entity;
-
-                return true;
-            }));
-        $entityManager
-            ->expects(self::exactly(4))
-            ->method('flush');
+            ->method('save')
+            ->with(self::isInstanceOf(IncomingFileDto::class))
+            ->willReturnCallback(static function (IncomingFileDto $dto) use (&$persistedIncomingFiles, $incomingFile): IncomingFile {
+                $file = new IncomingFile();
+                $file->setFileName($dto->fileName);
+                $file->setFileStatus($dto->fileStatus);
+                $file->setReceivedAt($dto->receivedAt);
+                $file->setCreatedAt($dto->createdAt);
+                $file->setUpdatedAt($dto->updatedAt);
+                $file->setFileType($dto->fileType);
+                $file->setFileUrl($dto->fileUrl);
+                $persistedIncomingFiles[] = $file;
+                return $file;
+            });
+        $incomingFileRepository
+            ->expects(self::exactly(2))
+            ->method('update')
+            ->with(self::isInstanceOf(IncomingFile::class));
 
         $messageBus = $this->createMock(MessageBusInterface::class);
         $messageBus
@@ -88,7 +96,7 @@ final class ImportedFileMoverTest extends TestCase
         $mover = new ImportedFileMover(
             filesystem: $filesystem,
             messageBus: $messageBus,
-            entityManager: $entityManager,
+            incomingFileRepository: $incomingFileRepository,
             baseDirectory: $this->workspaceDirectory,
         );
 
@@ -121,22 +129,28 @@ final class ImportedFileMoverTest extends TestCase
         file_put_contents($inputDirectory.\DIRECTORY_SEPARATOR.self::UNSUPPORTED_FILENAME, self::UNSUPPORTED_CONTENT);
 
         $persistedIncomingFiles = [];
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager
+        
+        $incomingFileRepository = $this->createMock(IncomingFileRepository::class);
+        $incomingFileRepository
             ->expects(self::once())
-            ->method('persist')
-            ->with(self::callback(static function (object $entity) use (&$persistedIncomingFiles): bool {
-                if (!$entity instanceof IncomingFile) {
-                    return false;
-                }
-
-                $persistedIncomingFiles[] = $entity;
-
-                return true;
-            }));
-        $entityManager
-            ->expects(self::exactly(2))
-            ->method('flush');
+            ->method('save')
+            ->with(self::isInstanceOf(IncomingFileDto::class))
+            ->willReturnCallback(static function (IncomingFileDto $dto) use (&$persistedIncomingFiles): IncomingFile {
+                $file = new IncomingFile();
+                $file->setFileName($dto->fileName);
+                $file->setFileStatus($dto->fileStatus);
+                $file->setReceivedAt($dto->receivedAt);
+                $file->setCreatedAt($dto->createdAt);
+                $file->setUpdatedAt($dto->updatedAt);
+                $file->setFileType($dto->fileType);
+                $file->setFileUrl($dto->fileUrl);
+                $persistedIncomingFiles[] = $file;
+                return $file;
+            });
+        $incomingFileRepository
+            ->expects(self::once())
+            ->method('update')
+            ->with(self::isInstanceOf(IncomingFile::class));
 
         $messageBus = $this->createMock(MessageBusInterface::class);
         $messageBus
@@ -148,7 +162,7 @@ final class ImportedFileMoverTest extends TestCase
         $mover = new ImportedFileMover(
             filesystem: $filesystem,
             messageBus: $messageBus,
-            entityManager: $entityManager,
+            incomingFileRepository: $incomingFileRepository,
             baseDirectory: $this->workspaceDirectory,
         );
 
@@ -171,22 +185,28 @@ final class ImportedFileMoverTest extends TestCase
         file_put_contents($inputDirectory.\DIRECTORY_SEPARATOR.self::EDI_SOURCE_FILENAME, self::EDI_CONTENT);
 
         $persistedIncomingFiles = [];
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager
+        
+        $incomingFileRepository = $this->createMock(IncomingFileRepository::class);
+        $incomingFileRepository
             ->expects(self::once())
-            ->method('persist')
-            ->with(self::callback(static function (object $entity) use (&$persistedIncomingFiles): bool {
-                if (!$entity instanceof IncomingFile) {
-                    return false;
-                }
-
-                $persistedIncomingFiles[] = $entity;
-
-                return true;
-            }));
-        $entityManager
-            ->expects(self::exactly(2))
-            ->method('flush');
+            ->method('save')
+            ->with(self::isInstanceOf(IncomingFileDto::class))
+            ->willReturnCallback(static function (IncomingFileDto $dto) use (&$persistedIncomingFiles): IncomingFile {
+                $file = new IncomingFile();
+                $file->setFileName($dto->fileName);
+                $file->setFileStatus($dto->fileStatus);
+                $file->setReceivedAt($dto->receivedAt);
+                $file->setCreatedAt($dto->createdAt);
+                $file->setUpdatedAt($dto->updatedAt);
+                $file->setFileType($dto->fileType);
+                $file->setFileUrl($dto->fileUrl);
+                $persistedIncomingFiles[] = $file;
+                return $file;
+            });
+        $incomingFileRepository
+            ->expects(self::once())
+            ->method('update')
+            ->with(self::isInstanceOf(IncomingFile::class));
 
         $messageBus = $this->createMock(MessageBusInterface::class);
         $messageBus
@@ -198,7 +218,7 @@ final class ImportedFileMoverTest extends TestCase
         $mover = new ImportedFileMover(
             filesystem: $filesystem,
             messageBus: $messageBus,
-            entityManager: $entityManager,
+            incomingFileRepository: $incomingFileRepository,
             baseDirectory: $this->workspaceDirectory,
         );
 
@@ -215,13 +235,13 @@ final class ImportedFileMoverTest extends TestCase
 
     public function testItCreatesMissingDirectoriesWhenTheyDoNotExist(): void
     {
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager
+        $incomingFileRepository = $this->createMock(IncomingFileRepository::class);
+        $incomingFileRepository
             ->expects(self::never())
-            ->method('persist');
-        $entityManager
+            ->method('save');
+        $incomingFileRepository
             ->expects(self::never())
-            ->method('flush');
+            ->method('update');
 
         $messageBus = $this->createMock(MessageBusInterface::class);
         $messageBus
@@ -231,7 +251,7 @@ final class ImportedFileMoverTest extends TestCase
         $mover = new ImportedFileMover(
             filesystem: new Filesystem(),
             messageBus: $messageBus,
-            entityManager: $entityManager,
+            incomingFileRepository: $incomingFileRepository,
             baseDirectory: $this->workspaceDirectory,
         );
 
