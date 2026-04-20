@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Dtos\IncomingFileDto;
 use App\Entity\IncomingFile;
 use App\Message\ImportedFileMessage;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Repository\IncomingFileRepository;
 use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -32,7 +33,7 @@ final readonly class ImportedFileMover
     public function __construct(
         private Filesystem $filesystem,
         private MessageBusInterface $messageBus,
-        private EntityManagerInterface $entityManager,
+        private IncomingFileRepository $incomingFileRepository,
         private string $baseDirectory,
     ) {
     }
@@ -65,7 +66,7 @@ final readonly class ImportedFileMover
             $incomingFile
                 ->setFileStatus(self::IMPORTED_FILE_STATUS)
                 ->setUpdatedAt(new \DateTimeImmutable());
-            $this->entityManager->flush();
+            $this->incomingFileRepository->update($incomingFile);
 
             $movedFiles[] = basename($destinationPath);
             $movedFilePaths[] = $destinationPath;
@@ -149,19 +150,17 @@ final readonly class ImportedFileMover
     private function createIncomingFileRecord(string $destinationPath, string $destinationFilename): IncomingFile
     {
         $now = new \DateTimeImmutable();
-        $incomingFile = (new IncomingFile())
-            ->setFileName($destinationFilename)
-            ->setFileStatus(self::PENDING_IMPORT_STATUS)
-            ->setReceivedAt($now)
-            ->setCreatedAt($now)
-            ->setUpdatedAt($now)
-            ->setFileType(strtolower((string) pathinfo($destinationPath, \PATHINFO_EXTENSION)))
-            ->setFileUrl(self::IMPORTED_FILE_URL_PREFIX.$destinationFilename);
+        $incomingFileDto = new IncomingFileDto(
+            fileName: $destinationFilename,
+            fileStatus: self::PENDING_IMPORT_STATUS,
+            receivedAt: $now,
+            createdAt: $now,
+            updatedAt: $now,
+            fileType: strtolower((string) pathinfo($destinationPath, \PATHINFO_EXTENSION)),
+            fileUrl: self::IMPORTED_FILE_URL_PREFIX.$destinationFilename,
+        );
 
-        $this->entityManager->persist($incomingFile);
-        $this->entityManager->flush();
-
-        return $incomingFile;
+        return $this->incomingFileRepository->save($incomingFileDto);
     }
 
     private function buildUniqueDestinationPath(string $directory, string $filename): string
