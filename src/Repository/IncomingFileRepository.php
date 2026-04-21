@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Dtos\IncomingFileDto;
+use App\DataObject\Dtos\IncomingFileDto;
 use App\Entity\IncomingFile;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;

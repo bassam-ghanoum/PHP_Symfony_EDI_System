@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service;
 
-use App\Dtos\IncomingFileDto;
+use App\DataObject\Dtos\IncomingFileDto;
 use App\Entity\IncomingFile;
 use App\Message\ImportedFileMessage;
 use App\Repository\IncomingFileRepository;
@@ -81,10 +81,6 @@ final class ImportedFileMoverTest extends TestCase
                 $persistedIncomingFiles[] = $file;
                 return $file;
             });
-        $incomingFileRepository
-            ->expects(self::exactly(2))
-            ->method('update')
-            ->with(self::isInstanceOf(IncomingFile::class));
 
         $messageBus = $this->createMock(MessageBusInterface::class);
         $messageBus
@@ -147,10 +143,6 @@ final class ImportedFileMoverTest extends TestCase
                 $persistedIncomingFiles[] = $file;
                 return $file;
             });
-        $incomingFileRepository
-            ->expects(self::once())
-            ->method('update')
-            ->with(self::isInstanceOf(IncomingFile::class));
 
         $messageBus = $this->createMock(MessageBusInterface::class);
         $messageBus
@@ -203,10 +195,6 @@ final class ImportedFileMoverTest extends TestCase
                 $persistedIncomingFiles[] = $file;
                 return $file;
             });
-        $incomingFileRepository
-            ->expects(self::once())
-            ->method('update')
-            ->with(self::isInstanceOf(IncomingFile::class));
 
         $messageBus = $this->createMock(MessageBusInterface::class);
         $messageBus
@@ -239,9 +227,6 @@ final class ImportedFileMoverTest extends TestCase
         $incomingFileRepository
             ->expects(self::never())
             ->method('save');
-        $incomingFileRepository
-            ->expects(self::never())
-            ->method('update');
 
         $messageBus = $this->createMock(MessageBusInterface::class);
         $messageBus

@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\Message\ImportedFileMessage;
-use App\Service\EdifactInvoicParserInterface;
+use App\Parser\EdifactInvoicParserInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
-final readonly class ImportedFileMessageHandler
+final class ImportedFileMessageHandler
 {
     private const FILE_PATH_CONTEXT_KEY = 'file_path';
     private const NEXT_STEP_CONTEXT_KEY = 'next_step';

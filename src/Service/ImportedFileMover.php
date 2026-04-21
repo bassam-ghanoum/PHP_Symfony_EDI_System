@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Dtos\IncomingFileDto;
+use App\DataObject\Dtos\IncomingFileDto;
+use App\DataObject\ImportedFileMoveResult;
 use App\Entity\IncomingFile;
 use App\Message\ImportedFileMessage;
 use App\Repository\IncomingFileRepository;
@@ -59,18 +60,37 @@ final readonly class ImportedFileMover
                 $importedDirectory,
                 $destinationFilename,
             );
-            $incomingFile = $this->createIncomingFileRecord($destinationPath, basename($destinationPath));
 
-            $this->filesystem->rename($sourcePath, $destinationPath, true);
+            try {
+                $incomingFileDto = $this->createIncomingFileDto($destinationPath, basename($destinationPath));
 
-            $incomingFile
-                ->setFileStatus(self::IMPORTED_FILE_STATUS)
-                ->setUpdatedAt(new \DateTimeImmutable());
-            $this->incomingFileRepository->update($incomingFile);
+                $this->filesystem->rename($sourcePath, $destinationPath, true);
 
-            $movedFiles[] = basename($destinationPath);
-            $movedFilePaths[] = $destinationPath;
-            $this->messageBus->dispatch(new ImportedFileMessage($destinationPath));
+                $incomingFileDto
+                    ->setFileStatus(self::IMPORTED_FILE_STATUS)
+                    ->setUpdatedAt(new \DateTimeImmutable());
+                    
+                $this->incomingFileRepository->save($incomingFileDto);
+
+                $movedFiles[] = basename($destinationPath);
+                $movedFilePaths[] = $destinationPath;
+
+                try {
+                    $this->messageBus->dispatch(new ImportedFileMessage($destinationPath));
+                } catch (\Throwable $e) {
+                    // Log but continue on message dispatch failures
+                    trigger_error(
+                        \sprintf('Failed to dispatch message for file "%s": %s', basename($destinationPath), $e->getMessage()),
+                        \E_USER_WARNING,
+                    );
+                }
+            } catch (\Throwable $e) {
+                // Log but continue on file processing failures
+                trigger_error(
+                    \sprintf('Failed to process file "%s": %s', basename($sourcePath), $e->getMessage()),
+                    \E_USER_WARNING,
+                );
+            }
         }
 
         return new ImportedFileMoveResult(
@@ -147,10 +167,11 @@ final readonly class ImportedFileMover
         return $sanitizedFilename !== '' ? $sanitizedFilename : self::FALLBACK_FILENAME;
     }
 
-    private function createIncomingFileRecord(string $destinationPath, string $destinationFilename): IncomingFile
+    private function createIncomingFileDto(string $destinationPath, string $destinationFilename): IncomingFileDto
     {
         $now = new \DateTimeImmutable();
-        $incomingFileDto = new IncomingFileDto(
+
+        return new IncomingFileDto(
             fileName: $destinationFilename,
             fileStatus: self::PENDING_IMPORT_STATUS,
             receivedAt: $now,
@@ -159,8 +180,6 @@ final readonly class ImportedFileMover
             fileType: strtolower((string) pathinfo($destinationPath, \PATHINFO_EXTENSION)),
             fileUrl: self::IMPORTED_FILE_URL_PREFIX.$destinationFilename,
         );
-
-        return $this->incomingFileRepository->save($incomingFileDto);
     }
 
     private function buildUniqueDestinationPath(string $directory, string $filename): string

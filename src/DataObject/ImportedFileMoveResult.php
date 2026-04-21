@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\DataObject;
 
-final readonly class ImportedFileMoveResult
+final class ImportedFileMoveResult
 {
     /**
      * @param list<string> $movedFiles

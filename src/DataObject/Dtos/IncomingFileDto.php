@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Dtos;
+namespace App\DataObject\Dtos;
 
 final class IncomingFileDto
 {
@@ -16,5 +16,19 @@ final class IncomingFileDto
         public ?string $fileType = null,
         public ?string $fileUrl = null,
     ) {
+    }
+
+    public function setUpdatedAt(?\DateTimeImmutable $updatedAt): self
+    {
+        $this->updatedAt = $updatedAt;
+
+        return $this;
+    }
+
+    public function setFileStatus(?string $fileStatus): self
+    {
+        $this->fileStatus = $fileStatus;
+
+        return $this;
     }
 }

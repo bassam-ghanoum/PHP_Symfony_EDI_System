@@ -6,8 +6,8 @@ namespace App\Tests\MessageHandler;
 
 use App\Message\ImportedFileMessage;
 use App\MessageHandler\ImportedFileMessageHandler;
-use App\Service\EdifactInvoicParseResult;
-use App\Service\EdifactInvoicParserInterface;
+use App\DataObject\EdifactInvoicParseResult;
+use App\Parser\EdifactInvoicParserInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 

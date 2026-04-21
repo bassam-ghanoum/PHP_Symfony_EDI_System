@@ -67,7 +67,7 @@ class IncomingFile
     public function getFileStatus(): ?string
     {
         return $this->fileStatus;
-    }
+    } 
 
     public function setFileStatus(?string $fileStatus): self
     {

@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Parser;
+
+use App\DataObject\EdifactInvoicParseResult;
+use App\DataObject\Dtos\IncomingFileDto;
 
 final class EdifactInvoicParser implements EdifactInvoicParserInterface
 {
