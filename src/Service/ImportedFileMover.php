@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\DataObject\Dtos\IncomingFileDto;
+use App\DataObject\ImportedFileProcessingResult;
 use App\DataObject\ImportedFileMoveResult;
 use App\Entity\IncomingFile;
 use App\Message\ImportedFileMessage;
@@ -39,29 +40,37 @@ final readonly class ImportedFileMover
     ) {
     }
 
-    public function __invoke(): ImportedFileMoveResult
+public function __invoke(): \Generator
     {
         return $this->moveFiles();
     }
 
-    public function moveFiles(): ImportedFileMoveResult
+    /**
+     * @return \Generator<int, ImportedFileProcessingResult>
+     */
+    public function moveFiles(): \Generator
     {
         $inputDirectory = $this->baseDirectory.\DIRECTORY_SEPARATOR.self::INPUT_DIRECTORY_NAME;
         $importedDirectory = $this->baseDirectory.\DIRECTORY_SEPARATOR.self::IMPORTED_DIRECTORY_NAME;
 
         $this->filesystem->mkdir([$inputDirectory, $importedDirectory]);
 
-        $movedFiles = [];
-        $movedFilePaths = [];
-
         foreach ($this->listFiles($inputDirectory) as $sourcePath) {
-            $destinationFilename = $this->buildTimestampedFilename(basename($sourcePath));
-            $destinationPath = $this->buildUniqueDestinationPath(
-                $importedDirectory,
-                $destinationFilename,
-            );
-
+            $filename = basename($sourcePath);
+            
             try {
+                yield new ImportedFileProcessingResult(
+                    filePath: $sourcePath,
+                    fileName: $filename,
+                    status: 'processing',
+                );
+
+                $destinationFilename = $this->buildTimestampedFilename($filename);
+                $destinationPath = $this->buildUniqueDestinationPath(
+                    $importedDirectory,
+                    $destinationFilename,
+                );
+
                 $incomingFileDto = $this->createIncomingFileDto($destinationPath, basename($destinationPath));
 
                 $this->filesystem->rename($sourcePath, $destinationPath, true);
@@ -69,36 +78,37 @@ final readonly class ImportedFileMover
                 $incomingFileDto
                     ->setFileStatus(self::IMPORTED_FILE_STATUS)
                     ->setUpdatedAt(new \DateTimeImmutable());
-                    
+                
                 $this->incomingFileRepository->save($incomingFileDto);
-
-                $movedFiles[] = basename($destinationPath);
-                $movedFilePaths[] = $destinationPath;
 
                 try {
                     $this->messageBus->dispatch(new ImportedFileMessage($destinationPath));
                 } catch (\Throwable $e) {
-                    // Log but continue on message dispatch failures
                     trigger_error(
                         \sprintf('Failed to dispatch message for file "%s": %s', basename($destinationPath), $e->getMessage()),
                         \E_USER_WARNING,
                     );
                 }
+
+                yield new ImportedFileProcessingResult(
+                    filePath: $destinationPath,
+                    fileName: basename($destinationPath),
+                    status: 'success',
+                );
             } catch (\Throwable $e) {
-                // Log but continue on file processing failures
                 trigger_error(
-                    \sprintf('Failed to process file "%s": %s', basename($sourcePath), $e->getMessage()),
+                    \sprintf('Failed to process file "%s": %s', $filename, $e->getMessage()),
                     \E_USER_WARNING,
+                );
+
+                yield new ImportedFileProcessingResult(
+                    filePath: $sourcePath,
+                    fileName: $filename,
+                    status: 'failed',
+                    errorMessage: $e->getMessage(),
                 );
             }
         }
-
-        return new ImportedFileMoveResult(
-            inputDirectory: $inputDirectory,
-            importedDirectory: $importedDirectory,
-            movedFiles: $movedFiles,
-            movedFilePaths: $movedFilePaths,
-        );
     }
 
     /**

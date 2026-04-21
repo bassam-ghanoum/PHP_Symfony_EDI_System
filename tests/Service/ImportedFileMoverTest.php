@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service;
 
 use App\DataObject\Dtos\IncomingFileDto;
+use App\DataObject\ImportedFileProcessingResult;
 use App\Entity\IncomingFile;
 use App\Message\ImportedFileMessage;
 use App\Repository\IncomingFileRepository;
@@ -18,6 +19,7 @@ final class ImportedFileMoverTest extends TestCase
 {
     private const WORKSPACE_PREFIX = 'imported-file-mover-';
     private const INPUT_DIRECTORY_NAME = 'input';
+    private const IMPORTED_DIRECTORY_NAME = 'imported';
     private const FIRST_TXT_FILENAME = 'first.txt';
     private const SECOND_TXT_FILENAME = 'second.txt';
     private const FIRST_TXT_CONTENT = 'first';
@@ -96,21 +98,23 @@ final class ImportedFileMoverTest extends TestCase
             baseDirectory: $this->workspaceDirectory,
         );
 
-        $result = $mover->moveFiles();
+        $results = iterator_to_array(($mover)());
+        $successResults = array_filter($results, static fn (ImportedFileProcessingResult $r) => $r->status === 'success');
 
-        self::assertSame(2, $result->movedCount());
-        self::assertCount(2, $result->movedFilePaths);
+        self::assertCount(4, $results); // 2 processing + 2 success
+        self::assertCount(2, $successResults);
         self::assertCount(2, $persistedIncomingFiles);
-        self::assertFileDoesNotExist($result->inputDirectory.\DIRECTORY_SEPARATOR.self::FIRST_TXT_FILENAME);
-        self::assertFileDoesNotExist($result->inputDirectory.\DIRECTORY_SEPARATOR.self::SECOND_TXT_FILENAME);
-        self::assertMatchesRegularExpression(self::FIRST_TXT_IMPORTED_PATTERN, $result->movedFiles[0]);
-        self::assertMatchesRegularExpression(self::SECOND_TXT_IMPORTED_PATTERN, $result->movedFiles[1]);
-        self::assertFileExists($result->movedFilePaths[0]);
-        self::assertFileExists($result->movedFilePaths[1]);
-        self::assertSame($result->movedFiles[0], $persistedIncomingFiles[0]->getFileName());
-        self::assertSame($result->movedFiles[1], $persistedIncomingFiles[1]->getFileName());
-        self::assertSame(self::IMPORTED_FILE_URL_PREFIX.$result->movedFiles[0], $persistedIncomingFiles[0]->getFileUrl());
-        self::assertSame(self::IMPORTED_FILE_URL_PREFIX.$result->movedFiles[1], $persistedIncomingFiles[1]->getFileUrl());
+        self::assertFileDoesNotExist($inputDirectory.\DIRECTORY_SEPARATOR.self::FIRST_TXT_FILENAME);
+        self::assertFileDoesNotExist($inputDirectory.\DIRECTORY_SEPARATOR.self::SECOND_TXT_FILENAME);
+        
+        $successResultsArray = array_values($successResults);
+        self::assertMatchesRegularExpression(self::FIRST_TXT_IMPORTED_PATTERN, $successResultsArray[0]->fileName);
+        self::assertMatchesRegularExpression(self::SECOND_TXT_IMPORTED_PATTERN, $successResultsArray[1]->fileName);
+        
+        self::assertSame($successResultsArray[0]->fileName, $persistedIncomingFiles[0]->getFileName());
+        self::assertSame($successResultsArray[1]->fileName, $persistedIncomingFiles[1]->getFileName());
+        self::assertSame(self::IMPORTED_FILE_URL_PREFIX.$successResultsArray[0]->fileName, $persistedIncomingFiles[0]->getFileUrl());
+        self::assertSame(self::IMPORTED_FILE_URL_PREFIX.$successResultsArray[1]->fileName, $persistedIncomingFiles[1]->getFileUrl());
         self::assertSame(self::IMPORTED_STATUS, $persistedIncomingFiles[0]->getFileStatus());
         self::assertSame(self::IMPORTED_STATUS, $persistedIncomingFiles[1]->getFileStatus());
     }
@@ -158,14 +162,19 @@ final class ImportedFileMoverTest extends TestCase
             baseDirectory: $this->workspaceDirectory,
         );
 
-        $result = $mover->moveFiles();
+        $results = iterator_to_array(($mover)());
+        $successResults = array_filter($results, static fn (ImportedFileProcessingResult $r) => $r->status === 'success');
 
-        self::assertSame(1, $result->movedCount());
-        self::assertMatchesRegularExpression(self::SANITIZED_TXT_EXPECTED_PATTERN, $result->movedFiles[0]);
-        self::assertSame($result->movedFiles[0], $persistedIncomingFiles[0]->getFileName());
-        self::assertSame(self::IMPORTED_FILE_URL_PREFIX.$result->movedFiles[0], $persistedIncomingFiles[0]->getFileUrl());
-        self::assertFileExists($result->movedFilePaths[0]);
-        self::assertFileExists($result->inputDirectory.\DIRECTORY_SEPARATOR.self::UNSUPPORTED_FILENAME);
+        self::assertCount(2, $results); // 1 processing + 1 success (unsupported file ignored)
+        self::assertCount(1, $successResults);
+        self::assertCount(1, $persistedIncomingFiles);
+        
+        $successResultsArray = array_values($successResults);
+        self::assertMatchesRegularExpression(self::SANITIZED_TXT_EXPECTED_PATTERN, $successResultsArray[0]->fileName);
+        self::assertSame($successResultsArray[0]->fileName, $persistedIncomingFiles[0]->getFileName());
+        self::assertSame(self::IMPORTED_FILE_URL_PREFIX.$successResultsArray[0]->fileName, $persistedIncomingFiles[0]->getFileUrl());
+        self::assertFileExists($inputDirectory.\DIRECTORY_SEPARATOR.self::UNSUPPORTED_FILENAME);
+        self::assertFileDoesNotExist($inputDirectory.\DIRECTORY_SEPARATOR.self::SANITIZED_TXT_SOURCE_FILENAME);
     }
 
     public function testItAcceptsAndImportsEdiFiles(): void
@@ -210,15 +219,19 @@ final class ImportedFileMoverTest extends TestCase
             baseDirectory: $this->workspaceDirectory,
         );
 
-        $result = $mover->moveFiles();
+        $results = iterator_to_array(($mover)());
+        $successResults = array_filter($results, static fn (ImportedFileProcessingResult $r) => $r->status === 'success');
 
-        self::assertSame(1, $result->movedCount());
-        self::assertMatchesRegularExpression(self::EDI_EXPECTED_PATTERN, $result->movedFiles[0]);
+        self::assertCount(2, $results); // 1 processing + 1 success
+        self::assertCount(1, $successResults);
+        self::assertCount(1, $persistedIncomingFiles);
+        
+        $successResultsArray = array_values($successResults);
+        self::assertMatchesRegularExpression(self::EDI_EXPECTED_PATTERN, $successResultsArray[0]->fileName);
         self::assertSame(self::EDI_FILE_TYPE, $persistedIncomingFiles[0]->getFileType());
-        self::assertSame($result->movedFiles[0], $persistedIncomingFiles[0]->getFileName());
-        self::assertSame(self::IMPORTED_FILE_URL_PREFIX.$result->movedFiles[0], $persistedIncomingFiles[0]->getFileUrl());
-        self::assertFileExists($result->movedFilePaths[0]);
-        self::assertFileDoesNotExist($result->inputDirectory.\DIRECTORY_SEPARATOR.self::EDI_SOURCE_FILENAME);
+        self::assertSame($successResultsArray[0]->fileName, $persistedIncomingFiles[0]->getFileName());
+        self::assertSame(self::IMPORTED_FILE_URL_PREFIX.$successResultsArray[0]->fileName, $persistedIncomingFiles[0]->getFileUrl());
+        self::assertFileDoesNotExist($inputDirectory.\DIRECTORY_SEPARATOR.self::EDI_SOURCE_FILENAME);
     }
 
     public function testItCreatesMissingDirectoriesWhenTheyDoNotExist(): void
@@ -240,10 +253,12 @@ final class ImportedFileMoverTest extends TestCase
             baseDirectory: $this->workspaceDirectory,
         );
 
-        $result = $mover->moveFiles();
+        $results = iterator_to_array(($mover)());
 
-        self::assertSame(0, $result->movedCount());
-        self::assertDirectoryExists($result->inputDirectory);
-        self::assertDirectoryExists($result->importedDirectory);
+        self::assertCount(0, $results); // No files to process
+        $inputDirectory = $this->workspaceDirectory.\DIRECTORY_SEPARATOR.self::INPUT_DIRECTORY_NAME;
+        $importedDirectory = $this->workspaceDirectory.\DIRECTORY_SEPARATOR.self::IMPORTED_DIRECTORY_NAME;
+        self::assertDirectoryExists($inputDirectory);
+        self::assertDirectoryExists($importedDirectory);
     }
 }

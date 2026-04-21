@@ -19,7 +19,6 @@ final class MoveImportedFilesCommand extends Command
 {
     public const COMMAND_NAME = 'app:imported-files:move';
     public const COMMAND_DESCRIPTION = 'Moves supported imported files from /ImportedFiles/input to /ImportedFiles/imported.';
-    private const SUCCESS_MESSAGE = 'Processed %d file(s) from "%s" to "%s".';
 
     public function __construct(
         private readonly ImportedFileMover $importedFileMover,
@@ -30,17 +29,33 @@ final class MoveImportedFilesCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $result = $this->importedFileMover->moveFiles();
 
+        $successCount = 0;
+        $failureCount = 0;
+        $movedFiles = [];
+
+        foreach (($this->importedFileMover)() as $result) {
+            if ($result->status === 'processing') {
+                $io->writeln(\sprintf('Processing file: <info>%s</info>', $result->fileName));
+            } elseif ($result->status === 'success') {
+                $io->writeln(\sprintf('✓ Successfully imported: <info>%s</info>', $result->fileName));
+                ++$successCount;
+                $movedFiles[] = $result->fileName;
+            } elseif ($result->status === 'failed') {
+                $io->writeln(\sprintf('✗ Failed to import: <error>%s</error> - %s', $result->fileName, $result->errorMessage));
+                ++$failureCount;
+            }
+        }
+
+        $io->newLine();
         $io->success(\sprintf(
-            self::SUCCESS_MESSAGE,
-            $result->movedCount(),
-            $result->inputDirectory,
-            $result->importedDirectory,
+            'Imported %d file(s), failed %d file(s)',
+            $successCount,
+            $failureCount,
         ));
 
-        if ($result->movedFiles !== []) {
-            $io->listing($result->movedFiles);
+        if ($movedFiles !== []) {
+            $io->listing($movedFiles);
         }
 
         return Command::SUCCESS;
