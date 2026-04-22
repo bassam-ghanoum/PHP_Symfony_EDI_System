@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Parser;
 
 use App\DataObject\EdifactInvoicParseResult;
-use App\DataObject\Dtos\IncomingFileDto;
+use App\Service\InvoicePersistenceService;
+use App\Service\InvoiceParsingService;
 
 final class EdifactInvoicParser implements EdifactInvoicParserInterface
 {
@@ -14,6 +15,12 @@ final class EdifactInvoicParser implements EdifactInvoicParserInterface
     private const FILE_READ_ERROR_MESSAGE = 'Unable to read imported file "%s".';
     private const NOT_INVOIC_MESSAGE = 'Imported file is not an EDIFACT INVOIC D96A message. Parsing stopped.';
     private const INVOIC_DETECTED_MESSAGE = 'EDIFACT INVOIC D96A message detected. Parsing process started.';
+
+    public function __construct(
+        private InvoiceParsingService $invoiceParsingService,
+        private InvoicePersistenceService $invoicePersistenceService,
+    ) {
+    }
 
     public function parse(string $filePath): EdifactInvoicParseResult
     {
@@ -35,10 +42,14 @@ final class EdifactInvoicParser implements EdifactInvoicParserInterface
             );
         }
 
+        $invoice = $this->invoiceParsingService->parse($content);
+        $this->invoicePersistenceService->save($invoice);
+
         return new EdifactInvoicParseResult(
             filePath: $filePath,
             isInvoic: true,
             message: self::INVOIC_DETECTED_MESSAGE,
+            invoice: $invoice,
         );
     }
 
