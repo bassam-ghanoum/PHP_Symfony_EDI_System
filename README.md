@@ -36,7 +36,7 @@ The system extracts and stores:
 
 ### Prerequisites
 - Docker and Docker Compose installed on your machine
-- The root `.env` file configured with database credentials (see [../README.md](../README.md))
+- The root `.env` file configured with database credentials (see [https://github.com/bassam-ghanoum/PHP_MYSQL_ENV/blob/master/README.md](../README.md))
 
 ### Starting the Application
 
