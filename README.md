@@ -77,21 +77,7 @@ The system extracts and stores:
 
 ### Supported File Format
 
-The system accepts **EDIFACT INVOIC D96A** messages. Example structure:
-```
-UNA:+.? '
-UNH+1+INVOIC:D:96A:UN'
-BGM+380+INV123456+9'
-RFF+ON:12345'
-RFF+DQ:67890'
-MOA+79:1000,00'
-MOA+9:1210,00'
-TAX+7+VAT'
-LIN+1+ITEM001'
-QTY+1:100'
-PRI+AAB:10,00'
-UNT+10+1'
-```
+The system accepts **EDIFACT INVOIC D96A** messages.
 
 ### Web Interface
 
@@ -107,11 +93,6 @@ Access the home page at http://localhost:8080 to:
 docker compose exec edi_system php bin/phpunit
 ```
 
-### Run Code Quality Checks
-```bash
-docker compose exec edi_system php bin/phpstan
-```
-
 ### Access Database
 
 **Using phpMyAdmin**:
@@ -121,11 +102,6 @@ docker compose exec edi_system php bin/phpstan
 **Using command line**:
 ```bash
 docker compose exec edi_mysql mysql -u root -p
-```
-
-### View Application Logs
-```bash
-docker compose logs -f edi_system
 ```
 
 ## Directory Structure
@@ -175,13 +151,6 @@ Key entities:
 - Run: `docker compose exec edi_system chown -R www-data:www-data ImportedFiles/`
 
 ## Configuration
-
-Application configuration files are located in `config/`:
-- `packages/`: Service configuration (database, cache, security, etc.)
-- `services.yaml`: Service definitions
-- `routes.yaml`: URL routing
-- `security.yaml`: Authentication and authorization
-
 Modify `.env` file in the project root to override settings:
 ```
 DATABASE_URL=mysql://user:password@edi_mysql:3306/edi
@@ -193,12 +162,6 @@ DATABASE_URL=mysql://user:password@edi_mysql:3306/edi
 - Message queues: Enable async processing for large volumes
 - Database indexing: Already configured on invoice numbers and dates
 - File cleanup: Regularly archive files from `ImportedFiles/imported/`
-
-## Support & Documentation
-
-- **Symfony Documentation**: https://symfony.com/doc
-- **EDIFACT Standards**: https://www.unece.org/cefact/edifact/welcome.html
-- **Docker Documentation**: https://docs.docker.com/
 
 ## License
 
