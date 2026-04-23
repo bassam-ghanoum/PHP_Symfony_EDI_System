@@ -25,3 +25,8 @@
 !/ImportedFiles/input/.gitkeep
 /ImportedFiles/imported/*
 !/ImportedFiles/imported/.gitkeep
+
+###> ignore assets and translations ###
+/assets/
+/translations/
+###< ignore assets and translations ###
