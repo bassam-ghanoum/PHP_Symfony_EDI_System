@@ -18,7 +18,7 @@ class IncomingFileRepository  extends ServiceEntityRepository
 
     public function save(IncomingFileDto $dto): IncomingFile
     {
-        $incomingFile = $this->getIncomingFileFromDto($dto);
+        $incomingFile = $dto->toEntity();
 
         $this->getEntityManager()->persist($incomingFile);
         $this->getEntityManager()->flush();
@@ -30,20 +30,5 @@ class IncomingFileRepository  extends ServiceEntityRepository
     {
         $this->getEntityManager()->persist($incomingFile);
         $this->getEntityManager()->flush();
-    }
-
-    private function getIncomingFileFromDto(IncomingFileDto $dto): IncomingFile
-    {
-        $incomingFile = new IncomingFile();
-        $incomingFile
-            ->setFileName($dto->fileName)
-            ->setFileStatus($dto->fileStatus)
-            ->setReceivedAt($dto->receivedAt)
-            ->setCreatedAt($dto->createdAt)
-            ->setUpdatedAt($dto->updatedAt)
-            ->setFileType($dto->fileType)
-            ->setFileUrl($dto->fileUrl);
-
-        return $incomingFile;
     }
 }

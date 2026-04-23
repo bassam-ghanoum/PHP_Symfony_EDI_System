@@ -201,7 +201,7 @@ final class InvoiceParsingService
     /**
      * @return InvoiceDetailDto[]
      */
-private function extractInvoiceDetails(array $segments): array
+    private function extractInvoiceDetails(array $segments): array
     {
         $details = [];
         $currentLineItem = null;

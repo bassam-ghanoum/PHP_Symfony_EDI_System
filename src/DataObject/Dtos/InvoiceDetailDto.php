@@ -36,4 +36,17 @@ final class InvoiceDetailDto
             totalAfterTax: $totalAfterTax,
         );
     }
+
+    public function toEntity(\App\Entity\Invoice $invoice): \App\Entity\InvoiceDetail
+    {
+        $invoiceDetail = new \App\Entity\InvoiceDetail();
+        $invoiceDetail
+            ->setInvoice($invoice)
+            ->setQuantity($this->quantity)
+            ->setUnitPrice($this->unitPrice)
+            ->setTotalBeforeTax($this->totalBeforeTax)
+            ->setTotalAfterTax($this->totalAfterTax);
+
+        return $invoiceDetail;
+    }
 }

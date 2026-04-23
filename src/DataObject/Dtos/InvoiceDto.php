@@ -57,4 +57,21 @@ final class InvoiceDto
             details: $details,
         );
     }
+
+    public function toEntity(): \App\Entity\Invoice
+    {
+        $invoice = new \App\Entity\Invoice();
+        $invoice
+            ->setInvoiceNumber($this->invoiceNumber)
+            ->setOrderId($this->orderId)
+            ->setDispatchId($this->dispatchId)
+            ->setInvoiceType($this->invoiceType)
+            ->setTotalBeforeTax($this->totalBeforeTax)
+            ->setTotalAfterTax($this->totalAfterTax)
+            ->setTaxType($this->taxType)
+            ->setTaxAmount($this->taxAmount)
+            ->setFileReceivedDate($this->fileReceivedDate);
+
+        return $invoice;
+    }
 }

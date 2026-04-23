@@ -18,16 +18,7 @@ final class InvoiceRepository extends ServiceEntityRepository
 
     public function saveFromDto(InvoiceDto $dto): Invoice
     {
-        $invoice = (new Invoice())
-            ->setInvoiceNumber($dto->invoiceNumber)
-            ->setOrderId($dto->orderId)
-            ->setDispatchId($dto->dispatchId)
-            ->setInvoiceType($dto->invoiceType)
-            ->setTotalBeforeTax($dto->totalBeforeTax)
-            ->setTotalAfterTax($dto->totalAfterTax)
-            ->setTaxType($dto->taxType)
-            ->setTaxAmount($dto->taxAmount)
-            ->setFileReceivedDate($dto->fileReceivedDate);
+        $invoice = $dto->toEntity();
 
         $entityManager = $this->getEntityManager();
         $entityManager->persist($invoice);

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\DataObject\Dtos;
 
+use App\Entity\IncomingFile;
+
 final class IncomingFileDto
 {
     public function __construct(
@@ -30,5 +32,20 @@ final class IncomingFileDto
         $this->fileStatus = $fileStatus;
 
         return $this;
+    }
+
+    public function toEntity(): IncomingFile
+    {
+        $incomingFile = new IncomingFile();
+        $incomingFile
+            ->setFileName($this->fileName)
+            ->setFileStatus($this->fileStatus)
+            ->setReceivedAt($this->receivedAt)
+            ->setCreatedAt($this->createdAt)
+            ->setUpdatedAt($this->updatedAt)
+            ->setFileType($this->fileType)
+            ->setFileUrl($this->fileUrl);
+
+        return $incomingFile;
     }
 }

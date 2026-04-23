@@ -25,13 +25,7 @@ final class InvoiceDetailRepository extends ServiceEntityRepository
         $entityManager = $this->getEntityManager();
 
         foreach ($detailDtos as $detailDto) {
-            $invoiceDetail = (new InvoiceDetail())
-                ->setInvoice($invoice)
-                ->setQuantity($detailDto->quantity)
-                ->setUnitPrice($detailDto->unitPrice)
-                ->setTotalBeforeTax($detailDto->totalBeforeTax)
-                ->setTotalAfterTax($detailDto->totalAfterTax);
-
+            $invoiceDetail = $detailDto->toEntity($invoice);
             $entityManager->persist($invoiceDetail);
         }
 
