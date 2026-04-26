@@ -14,19 +14,19 @@ class Invoice
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column]
+    #[ORM\Column(name: 'id')]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(length: 255, nullable: true, name: 'invoice_number')]
     private ?string $invoiceNumber = null;
 
-    #[ORM\Column(nullable: true)]
+    #[ORM\Column(nullable: true, name: 'order_id')]
     private ?int $orderId = null;
 
-    #[ORM\Column(nullable: true)]
+    #[ORM\Column(nullable: true, name: 'dispatch_id')]
     private ?int $dispatchId = null;
 
-    #[ORM\Column(length: 50, nullable: true)]
+    #[ORM\Column(length: 50, nullable: true, name: 'invoice_type')]
     private ?string $invoiceType = null;
 
     #[ORM\Column(type: 'decimal', precision: 12, scale: 2, nullable: true)]
@@ -35,10 +35,10 @@ class Invoice
     #[ORM\Column(type: 'decimal', precision: 12, scale: 2, nullable: true)]
     private ?string $totalAfterTax = null;
 
-    #[ORM\Column(length: 50, nullable: true)]
+    #[ORM\Column(length: 50, nullable: true, name: 'tax_type')]
     private ?string $taxType = null;
 
-    #[ORM\Column(type: 'decimal', precision: 12, scale: 2, nullable: true)]
+    #[ORM\Column(type: 'decimal', precision: 12, scale: 2, nullable: true, name: 'tax_amount')]
     private ?string $taxAmount = null;
 
     #[ORM\ManyToOne(targetEntity: IncomingFile::class, inversedBy: 'invoices')]

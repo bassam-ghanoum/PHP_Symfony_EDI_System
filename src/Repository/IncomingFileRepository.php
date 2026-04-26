@@ -26,9 +26,8 @@ class IncomingFileRepository  extends ServiceEntityRepository
         return $incomingFile;
     }
 
-    public function update(IncomingFile $incomingFile): void
+    public function findOneByFileName(string $fileName): ?IncomingFile
     {
-        $this->getEntityManager()->persist($incomingFile);
-        $this->getEntityManager()->flush();
+        return $this->findOneBy(['fileName' => $fileName]);
     }
 }

@@ -48,4 +48,18 @@ final class IncomingFileDto
 
         return $incomingFile;
     }
+
+    public static function fromEntity(IncomingFile $incomingFile): self
+    {
+        return new self(
+            id: $incomingFile->getId(),
+            fileName: $incomingFile->getFileName(),
+            fileStatus: $incomingFile->getFileStatus(),
+            receivedAt: $incomingFile->getReceivedAt(),
+            createdAt: $incomingFile->getCreatedAt(),
+            updatedAt: $incomingFile->getUpdatedAt(),
+            fileType: $incomingFile->getFileType(),
+            fileUrl: $incomingFile->getFileUrl(),
+        );
+    }
 }

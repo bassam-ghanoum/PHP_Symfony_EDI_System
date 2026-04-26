@@ -21,7 +21,7 @@ final class InvoiceDto
         public ?string $totalAfterTax = null,
         public ?string $taxType = null,
         public ?string $taxAmount = null,
-        public ?int $fileId = null,
+        public ?IncomingFileDto $incomingFile = null,
         public ?\DateTimeImmutable $fileReceivedDate = null,
         public array $details = [],
     ) {
@@ -39,7 +39,7 @@ final class InvoiceDto
         ?string $totalAfterTax = null,
         ?string $taxType = null,
         ?string $taxAmount = null,
-        ?int $fileId = null,
+        ?IncomingFileDto $incomingFile = null,
         ?\DateTimeImmutable $fileReceivedDate = null,
         array $details = [],
     ): self {
@@ -52,7 +52,7 @@ final class InvoiceDto
             totalAfterTax: $totalAfterTax,
             taxType: $taxType,
             taxAmount: $taxAmount,
-            fileId: $fileId,
+            incomingFile: $incomingFile,
             fileReceivedDate: $fileReceivedDate,
             details: $details,
         );

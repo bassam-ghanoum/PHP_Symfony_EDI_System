@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\DataObject\Dtos\InvoiceDetailDto;
+use App\DataObject\Dtos\IncomingFileDto;
 use App\DataObject\Dtos\InvoiceDto;
+use App\Repository\OrderRepository;
+use App\Repository\DispatchRepository;
 
 /**
  * Service for parsing EDIFACT INVOIC D96A messages.
@@ -71,7 +74,18 @@ final class InvoiceParsingService
     private const RFF_VENDOR_REFERENCE = 'VN';
     private const RFF_VAT_REFERENCE = 'VA';
 
-    public function parse(string $content): ?InvoiceDto
+    private OrderRepository $orderRepository;
+    private DispatchRepository $dispatchRepository;
+
+    public function __construct(
+        OrderRepository $orderRepository,
+        DispatchRepository $dispatchRepository,
+    ) {
+        $this->orderRepository = $orderRepository;
+        $this->dispatchRepository = $dispatchRepository;
+    }
+
+    public function parse(string $content, IncomingFileDto $incomingFile): ?InvoiceDto
     {
         $lines = $this->extractSegments($content);
         
@@ -82,16 +96,33 @@ final class InvoiceParsingService
         $invoiceData = $this->extractInvoiceHeader($lines);
         $invoiceDetails = $this->extractInvoiceDetails($lines);
 
+        // Look up actual order record by order_number
+        $orderId = null;
+        if ($invoiceData['orderNumber'] !== null) {
+            $order = $this->orderRepository->findByOrderNumber((string)$invoiceData['orderNumber']);
+            $orderId = $order?->getId();
+        }
+
+        // Look up actual dispatch record by dispatcher_number
+        $dispatchId = null;
+        if ($invoiceData['dispatchNumber'] !== null) {
+            $dispatch = $this->dispatchRepository->findByDispatcherNumberAndOrderNumber(
+                (string)$invoiceData['dispatchNumber'],
+                (string)$invoiceData['orderNumber']
+                );
+            $dispatchId = $dispatch?->getId();
+        }
+
         return InvoiceDto::create(
             invoiceNumber: $invoiceData['invoiceNumber'] ?? null,
-            orderId: $invoiceData['orderId'] ?? null,
-            dispatchId: $invoiceData['dispatchId'] ?? null,
+            orderId: $orderId,
+            dispatchId: $dispatchId,
             invoiceType: $invoiceData['invoiceType'] ?? null,
             totalBeforeTax: $invoiceData['totalBeforeTax'] ?? null,
             totalAfterTax: $invoiceData['totalAfterTax'] ?? null,
             taxType: $invoiceData['taxType'] ?? null,
             taxAmount: $invoiceData['taxAmount'] ?? null,
-            fileId: null,
+            incomingFile: $incomingFile,
             fileReceivedDate: new \DateTimeImmutable(),
             details: $invoiceDetails,
         );
@@ -124,8 +155,8 @@ final class InvoiceParsingService
         $data = [
             'invoiceNumber' => null,
             'invoiceType' => null,
-            'orderId' => null,
-            'dispatchId' => null,
+            'orderNumber' => null,
+            'dispatchNumber' => null,
             'totalBeforeTax' => null,
             'totalAfterTax' => null,
             'taxType' => null,
@@ -187,9 +218,9 @@ final class InvoiceParsingService
                     $refValue = $components[1] ?? '';
                     
                     if ($refType === self::RFF_ORDER_REFERENCE) {
-                        $data['orderId'] = is_numeric($refValue) ? (int) $refValue : null;
+                        $data['orderNumber'] = is_numeric($refValue) ? (int) $refValue : null;
                     } elseif ($refType === self::RFF_DESPATCH_REFERENCE) {
-                        $data['dispatchId'] = is_numeric($refValue) ? (int) $refValue : null;
+                        $data['dispatchNumber'] = is_numeric($refValue) ? (int) $refValue : null;
                     }
                 }
             }
