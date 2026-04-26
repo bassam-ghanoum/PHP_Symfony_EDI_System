@@ -14,19 +14,19 @@ use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Messenger\MessageBusInterface;
 
-final readonly class ImportedFileMover
+final class ImportedFileMover
 {
     private const INPUT_DIRECTORY_NAME = 'input';
     private const IMPORTED_DIRECTORY_NAME = 'imported';
     private const IMPORTED_FILE_STATUS = 'imported';
     private const PENDING_IMPORT_STATUS = 'pending_import';
-    private const IMPORTED_FILE_URL_PREFIX = '/ImportedFiles/imported/';
     private const TIMESTAMP_FORMAT = 'Ymd_His';
     private const FILENAME_SEPARATOR = '_';
     private const UTF8_CHARSET = 'UTF-8';
     private const ASCII_TRANSLITERATION_CHARSET = 'ASCII//TRANSLIT//IGNORE';
     private const SANITIZE_FILENAME_PATTERN = '/[^A-Za-z0-9_-]+/';
     private const SANITIZE_FILENAME_REPLACEMENT = '_';
+    private const VALID_ORIGINAL_FILENAME_PATTERN = '/\A[A-Za-z0-9._-]+\z/';
     private const FALLBACK_FILENAME = 'imported_file';
     private const CURRENT_DIRECTORY_NAME = '.';
     private const PARENT_DIRECTORY_NAME = '..';
@@ -65,13 +65,19 @@ public function __invoke(): \Generator
                     status: 'processing',
                 );
 
+                $this->assertOriginalFilenameIsSafe($filename);
+
                 $destinationFilename = $this->buildTimestampedFilename($filename);
                 $destinationPath = $this->buildUniqueDestinationPath(
                     $importedDirectory,
                     $destinationFilename,
                 );
 
-                $incomingFileDto = $this->createIncomingFileDto($destinationPath, basename($destinationPath));
+                $incomingFileDto = $this->createIncomingFileDto(
+                    $destinationPath,
+                    basename($destinationPath),
+                    $filename,
+                );
 
                 $this->filesystem->rename($sourcePath, $destinationPath, true);
 
@@ -94,6 +100,13 @@ public function __invoke(): \Generator
                     filePath: $destinationPath,
                     fileName: basename($destinationPath),
                     status: 'success',
+                );
+            } catch (\InvalidArgumentException $exception) {
+                yield new ImportedFileProcessingResult(
+                    filePath: $sourcePath,
+                    fileName: $filename,
+                    status: 'failed',
+                    errorMessage: $exception->getMessage(),
                 );
             } catch (\Throwable $e) {
                 trigger_error(
@@ -177,7 +190,11 @@ public function __invoke(): \Generator
         return $sanitizedFilename !== '' ? $sanitizedFilename : self::FALLBACK_FILENAME;
     }
 
-    private function createIncomingFileDto(string $destinationPath, string $destinationFilename): IncomingFileDto
+    private function createIncomingFileDto(
+        string $destinationPath,
+        string $destinationFilename,
+        string $originalFilename,
+    ): IncomingFileDto
     {
         $now = new \DateTimeImmutable();
 
@@ -188,8 +205,17 @@ public function __invoke(): \Generator
             createdAt: $now,
             updatedAt: $now,
             fileType: strtolower((string) pathinfo($destinationPath, \PATHINFO_EXTENSION)),
-            fileUrl: self::IMPORTED_FILE_URL_PREFIX.$destinationFilename,
+            originalFileName: $originalFilename,
         );
+    }
+
+    private function assertOriginalFilenameIsSafe(string $filename): void
+    {
+        if (preg_match(self::VALID_ORIGINAL_FILENAME_PATTERN, $filename) !== 1) {
+            throw new \InvalidArgumentException(
+                \sprintf('Original filename "%s" contains unsupported characters.', $filename),
+            );
+        }
     }
 
     private function buildUniqueDestinationPath(string $directory, string $filename): string

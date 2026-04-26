@@ -16,7 +16,7 @@ final class IncomingFileDto
         public ?\DateTimeImmutable $createdAt = null,
         public ?\DateTimeImmutable $updatedAt = null,
         public ?string $fileType = null,
-        public ?string $fileUrl = null,
+        public ?string $originalFileName = null,
     ) {
     }
 
@@ -44,7 +44,7 @@ final class IncomingFileDto
             ->setCreatedAt($this->createdAt)
             ->setUpdatedAt($this->updatedAt)
             ->setFileType($this->fileType)
-            ->setFileUrl($this->fileUrl);
+            ->setOriginalFileName($this->originalFileName);
 
         return $incomingFile;
     }
@@ -59,7 +59,7 @@ final class IncomingFileDto
             createdAt: $incomingFile->getCreatedAt(),
             updatedAt: $incomingFile->getUpdatedAt(),
             fileType: $incomingFile->getFileType(),
-            fileUrl: $incomingFile->getFileUrl(),
+            originalFileName: $incomingFile->getOriginalFileName(),
         );
     }
 }

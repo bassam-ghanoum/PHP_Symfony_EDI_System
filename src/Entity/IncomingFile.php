@@ -35,8 +35,8 @@ class IncomingFile
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $fileType = null;
 
-    #[ORM\Column(type: 'text', nullable: true)]
-    private ?string $fileUrl = null;
+    #[ORM\Column(type: 'text', nullable: true, name: 'original_file_name')]
+    private ?string $originalFileName = null;
 
     /** @var Collection<int, Invoice> */
     #[ORM\OneToMany(mappedBy: 'file', targetEntity: Invoice::class)]
@@ -124,14 +124,14 @@ class IncomingFile
         return $this;
     }
 
-    public function getFileUrl(): ?string
+    public function getOriginalFileName(): ?string
     {
-        return $this->fileUrl;
+        return $this->originalFileName;
     }
 
-    public function setFileUrl(?string $fileUrl): self
+    public function setOriginalFileName(?string $originalFileName): self
     {
-        $this->fileUrl = $fileUrl;
+        $this->originalFileName = $originalFileName;
 
         return $this;
     }

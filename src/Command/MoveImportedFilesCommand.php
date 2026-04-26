@@ -21,7 +21,7 @@ final class MoveImportedFilesCommand extends Command
     public const COMMAND_DESCRIPTION = 'Moves supported imported files from /ImportedFiles/input to /ImportedFiles/imported.';
 
     public function __construct(
-        private readonly ImportedFileMover $importedFileMover,
+        private ImportedFileMover $importedFileMover,
     ) {
         parent::__construct();
     }
