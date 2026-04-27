@@ -44,8 +44,4 @@ final class EdifactInvoicSegmentMap
     public const RFF_INVOICE_REFERENCE = 'IV';
     public const RFF_VENDOR_REFERENCE = 'VN';
     public const RFF_VAT_REFERENCE = 'VA';
-
-    private function __construct()
-    {
-    }
 }
