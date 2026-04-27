@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\DataObject\Dtos\InvoiceDetailDto;
 use App\Entity\Invoice;
 use App\Entity\InvoiceDetail;
+use App\Exception\DatabaseException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -22,13 +23,17 @@ final class InvoiceDetailRepository extends ServiceEntityRepository
      */
     public function saveFromDtos(array $detailDtos, Invoice $invoice): void
     {
-        $entityManager = $this->getEntityManager();
+        try {
+            $entityManager = $this->getEntityManager();
 
-        foreach ($detailDtos as $detailDto) {
-            $invoiceDetail = $detailDto->toEntity($invoice);
-            $entityManager->persist($invoiceDetail);
+            foreach ($detailDtos as $detailDto) {
+                $invoiceDetail = $detailDto->toEntity($invoice);
+                $entityManager->persist($invoiceDetail);
+            }
+
+            $entityManager->flush();
+        } catch (\Throwable $e) {
+            throw DatabaseException::fromThrowable($e, 'saving invoice details from DTOs');
         }
-
-        $entityManager->flush();
     }
 }

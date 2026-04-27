@@ -98,7 +98,7 @@ final class EdifactInvoicParserTest extends TestCase
         
         $invoice = $result->invoice;
         self::assertSame('18871152', $invoice->invoiceNumber);
-        self::assertSame('380', $invoice->invoiceType);
+        self::assertSame('Debit', $invoice->invoiceType);
         self::assertSame('1000.00', $invoice->totalBeforeTax);
         self::assertSame('1210.00', $invoice->totalAfterTax);
         self::assertSame('VAT', $invoice->taxType);
@@ -139,7 +139,7 @@ final class EdifactInvoicParserTest extends TestCase
         
         $invoice = $result->invoice;
         self::assertSame('18871152', $invoice->invoiceNumber);
-        self::assertSame('380', $invoice->invoiceType);
+        self::assertSame('Debit', $invoice->invoiceType);
         self::assertSame('25.00', $invoice->totalBeforeTax);
         self::assertSame('29.75', $invoice->totalAfterTax);
         self::assertSame('4.75', $invoice->taxAmount);

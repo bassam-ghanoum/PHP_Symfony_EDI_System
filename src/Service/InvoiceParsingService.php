@@ -7,6 +7,7 @@ namespace App\Service;
 use App\DataObject\Dtos\InvoiceDetailDto;
 use App\DataObject\Dtos\IncomingFileDto;
 use App\DataObject\Dtos\InvoiceDto;
+use App\Parser\EdifactInvoicSegmentMap;
 use App\Repository\OrderRepository;
 use App\Repository\DispatchRepository;
 
@@ -34,45 +35,6 @@ final class InvoiceParsingService
     private const ELEMENT_SEPARATOR = '+';
     private const COMPONENT_SEPARATOR = ':';
     private const DECIMAL_SEPARATOR = ',';
-
-    // BGM segment: invoice type code is at position 1, invoice number at position 2
-    private const BGM_INVOICE_TYPE_CODE_POSITION = 1;
-    private const BGM_INVOICE_NUMBER_POSITION = 2;
-    private const BGM_DATE_POSITION = 3;
-
-    // DTM segment: date/time information
-    private const DTM_DATE_TYPE_POSITION = 1;
-    private const DTM_DATE_VALUE_POSITION = 2;
-
-    // MOA segment: monetary amount type codes
-    private const MOA_AMOUNT_POSITION = 1;
-    private const MOA_AMOUNT_VALUE_INDEX = 0;
-    private const MOA_TYPE_TOTAL_EXCL_TAX = '79';
-    private const MOA_TYPE_TOTAL_INCL_TAX = '9';
-    private const MOA_TYPE_TOTAL_INCL_TAX_ALT = '129';
-    private const MOA_TYPE_TAX_AMOUNT = '124';
-    private const MOA_TYPE_TOTAL_NET = '125';
-    private const MOA_TYPE_AMOUNT_ALT = '77';
-
-    // TAX segment: tax type at position 1, tax rate at position 2, tax amount at position 3
-    private const TAX_TAX_TYPE_POSITION = 1;
-    private const TAX_TAX_RATE_POSITION = 2;
-    private const TAX_AMOUNT_POSITION = 3;
-    private const TAX_AMOUNT_VALUE_INDEX = 0;
-
-    // LIN segment: line number at position 1, item number at position 2
-    private const LIN_ITEM_NUMBER_POSITION = 2;
-
-    // QTY and PRI often encode their values in the first composite element after the tag.
-    private const SEGMENT_DATA_POSITION = 1;
-
-    // RFF segment: reference information - reference types
-    private const RFF_REFERENCE_POSITION = 1;
-    private const RFF_ORDER_REFERENCE = 'ON';
-    private const RFF_DESPATCH_REFERENCE = 'DQ';
-    private const RFF_INVOICE_REFERENCE = 'IV';
-    private const RFF_VENDOR_REFERENCE = 'VN';
-    private const RFF_VAT_REFERENCE = 'VA';
 
     private OrderRepository $orderRepository;
     private DispatchRepository $dispatchRepository;
@@ -167,30 +129,38 @@ final class InvoiceParsingService
             $elements = explode(self::ELEMENT_SEPARATOR, $segment);
             $tag = $elements[0] ?? '';
 
-            if ($tag === 'BGM') {
-                $data['invoiceType'] = $elements[self::BGM_INVOICE_TYPE_CODE_POSITION] ?? null;
-                $data['invoiceNumber'] = $elements[self::BGM_INVOICE_NUMBER_POSITION] ?? null;
+            if ($tag === EdifactInvoicSegmentMap::SEGMENT_BGM) {
+                $typeCode = $elements[EdifactInvoicSegmentMap::BGM_INVOICE_TYPE_CODE_POSITION] ?? null;
+                $data['invoiceType'] = match ($typeCode) {
+                    '380' => 'Debit',
+                    '381' => 'Credit',
+                    default => $typeCode,
+                };
+                $data['invoiceNumber'] = $elements[EdifactInvoicSegmentMap::BGM_INVOICE_NUMBER_POSITION] ?? null;
             }
 
-            if ($tag === 'MOA') {
-                $amount = $elements[self::MOA_AMOUNT_POSITION] ?? '';
+            if ($tag === EdifactInvoicSegmentMap::SEGMENT_MOA) {
+                $amount = $elements[EdifactInvoicSegmentMap::MOA_AMOUNT_POSITION] ?? '';
                 if ($amount) {
                     $components = explode(self::COMPONENT_SEPARATOR, $amount);
                     $moaType = $components[0] ?? '';
                     $moaAmount = $components[1] ?? '';
                     
                     // Handle different MOA type codes for totals
-                    if ($moaType === self::MOA_TYPE_TOTAL_EXCL_TAX) {
+                    if ($moaType === EdifactInvoicSegmentMap::MOA_TYPE_TOTAL_EXCL_TAX) {
                         $data['totalBeforeTax'] = $this->formatDecimal($moaAmount);
-                    } elseif ($moaType === self::MOA_TYPE_TOTAL_INCL_TAX || $moaType === self::MOA_TYPE_TOTAL_INCL_TAX_ALT) {
+                    } elseif (
+                        $moaType === EdifactInvoicSegmentMap::MOA_TYPE_TOTAL_INCL_TAX
+                        || $moaType === EdifactInvoicSegmentMap::MOA_TYPE_TOTAL_INCL_TAX_ALT
+                    ) {
                         $data['totalAfterTax'] = $this->formatDecimal($moaAmount);
-                    } elseif ($moaType === self::MOA_TYPE_TAX_AMOUNT) {
+                    } elseif ($moaType === EdifactInvoicSegmentMap::MOA_TYPE_TAX_AMOUNT) {
                         $data['taxAmount'] = $this->formatDecimal($moaAmount);
                     }
                 }
             }
 
-            if ($tag === 'TAX') {
+            if ($tag === EdifactInvoicSegmentMap::SEGMENT_TAX) {
                 // TAX segment formats:
                 // Simple: TAX+7+VAT (code + category)
                 // Composite: TAX+VAT:20,00:750,63 (VAT:rate:amount)
@@ -210,16 +180,16 @@ final class InvoiceParsingService
                 }
             }
 
-            if ($tag === 'RFF') {
-                $reference = $elements[self::RFF_REFERENCE_POSITION] ?? '';
+            if ($tag === EdifactInvoicSegmentMap::SEGMENT_RFF) {
+                $reference = $elements[EdifactInvoicSegmentMap::RFF_REFERENCE_POSITION] ?? '';
                 if ($reference) {
                     $components = explode(self::COMPONENT_SEPARATOR, $reference);
                     $refType = $components[0] ?? '';
                     $refValue = $components[1] ?? '';
                     
-                    if ($refType === self::RFF_ORDER_REFERENCE) {
+                    if ($refType === EdifactInvoicSegmentMap::RFF_ORDER_REFERENCE) {
                         $data['orderNumber'] = is_numeric($refValue) ? (int) $refValue : null;
-                    } elseif ($refType === self::RFF_DESPATCH_REFERENCE) {
+                    } elseif ($refType === EdifactInvoicSegmentMap::RFF_DESPATCH_REFERENCE) {
                         $data['dispatchNumber'] = is_numeric($refValue) ? (int) $refValue : null;
                     }
                 }
@@ -241,7 +211,7 @@ final class InvoiceParsingService
             $elements = explode(self::ELEMENT_SEPARATOR, $segment);
             $tag = $elements[0] ?? '';
 
-            if ($tag === 'LIN') {
+            if ($tag === EdifactInvoicSegmentMap::SEGMENT_LIN) {
                 if ($currentLineItem !== null) {
                     $details[] = $currentLineItem;
                 }
@@ -274,8 +244,8 @@ final class InvoiceParsingService
             }
 
             if ($currentLineItem !== null) {
-                if ($tag === 'QTY') {
-                    $quantity = $elements[self::SEGMENT_DATA_POSITION] ?? '';
+                if ($tag === EdifactInvoicSegmentMap::SEGMENT_QTY) {
+                    $quantity = $elements[EdifactInvoicSegmentMap::SEGMENT_DATA_POSITION] ?? '';
                     if ($quantity) {
                         $components = explode(self::COMPONENT_SEPARATOR, $quantity);
                         // Common formats include "47:1:EA" and "1:100".
@@ -286,8 +256,8 @@ final class InvoiceParsingService
                     }
                 }
 
-                if ($tag === 'PRI') {
-                    $price = $elements[self::SEGMENT_DATA_POSITION] ?? '';
+                if ($tag === EdifactInvoicSegmentMap::SEGMENT_PRI) {
+                    $price = $elements[EdifactInvoicSegmentMap::SEGMENT_DATA_POSITION] ?? '';
                     if ($price) {
                         $components = explode(self::COMPONENT_SEPARATOR, $price);
                         // Only set unit price if we haven't already, to preserve the first/best price
@@ -297,16 +267,19 @@ final class InvoiceParsingService
                     }
                 }
 
-                if ($tag === 'MOA') {
-                    $amount = $elements[self::MOA_AMOUNT_POSITION] ?? '';
+                if ($tag === EdifactInvoicSegmentMap::SEGMENT_MOA) {
+                    $amount = $elements[EdifactInvoicSegmentMap::MOA_AMOUNT_POSITION] ?? '';
                     if ($amount) {
                         $components = explode(self::COMPONENT_SEPARATOR, $amount);
                         $moaType = $components[0] ?? '';
                         $moaAmount = $components[1] ?? '';
                         
-                        if ($moaType === self::MOA_TYPE_TOTAL_INCL_TAX || $moaType === self::MOA_TYPE_TOTAL_INCL_TAX_ALT) {
+                        if (
+                            $moaType === EdifactInvoicSegmentMap::MOA_TYPE_TOTAL_INCL_TAX
+                            || $moaType === EdifactInvoicSegmentMap::MOA_TYPE_TOTAL_INCL_TAX_ALT
+                        ) {
                             $currentLineItem['totalAfterTax'] = $this->formatDecimal($moaAmount);
-                        } elseif ($moaType === self::MOA_TYPE_TOTAL_EXCL_TAX) {
+                        } elseif ($moaType === EdifactInvoicSegmentMap::MOA_TYPE_TOTAL_EXCL_TAX) {
                             $currentLineItem['totalBeforeTax'] = $this->formatDecimal($moaAmount);
                         }
                     }

@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\DataObject\Dtos\InvoiceDto;
 use App\Entity\IncomingFile;
 use App\Entity\Invoice;
+use App\Exception\DatabaseException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -19,16 +20,20 @@ final class InvoiceRepository extends ServiceEntityRepository
 
     public function saveFromDto(InvoiceDto $dto): Invoice
     {
-        $invoice = $dto->toEntity();
+        try {
+            $invoice = $dto->toEntity();
 
-        if ($dto->incomingFile?->id !== null) {
-            $invoice->setFile($this->getEntityManager()->getReference(IncomingFile::class, $dto->incomingFile->id));
+            if ($dto->incomingFile?->id !== null) {
+                $invoice->setFile($this->getEntityManager()->getReference(IncomingFile::class, $dto->incomingFile->id));
+            }
+
+            $entityManager = $this->getEntityManager();
+            $entityManager->persist($invoice);
+            $entityManager->flush();
+
+            return $invoice;
+        } catch (\Throwable $e) {
+            throw DatabaseException::fromThrowable($e, 'saving invoice from DTO');
         }
-
-        $entityManager = $this->getEntityManager();
-        $entityManager->persist($invoice);
-        $entityManager->flush();
-
-        return $invoice;
     }
 }

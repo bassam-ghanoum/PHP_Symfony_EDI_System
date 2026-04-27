@@ -43,7 +43,7 @@ final class InvoiceParsingServiceTest extends TestCase
         self::assertNotNull($invoice);
         self::assertInstanceOf(InvoiceDto::class, $invoice);
         self::assertSame('INV123456', $invoice->invoiceNumber);
-        self::assertSame('380', $invoice->invoiceType);
+        self::assertSame('Debit', $invoice->invoiceType);
         self::assertSame('1000.00', $invoice->totalBeforeTax);
         self::assertSame('1210.00', $invoice->totalAfterTax);
         self::assertSame('VAT', $invoice->taxType);
@@ -106,7 +106,7 @@ final class InvoiceParsingServiceTest extends TestCase
         self::assertNotNull($invoice);
         // Invoice header
         self::assertSame('18871152', $invoice->invoiceNumber);
-        self::assertSame('380', $invoice->invoiceType);
+        self::assertSame('Debit', $invoice->invoiceType);
         self::assertSame('VAT', $invoice->taxType);
         self::assertSame('25.00', $invoice->totalBeforeTax);
         self::assertSame('29.75', $invoice->totalAfterTax);

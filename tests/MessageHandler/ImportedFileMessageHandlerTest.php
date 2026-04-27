@@ -89,7 +89,7 @@ final class ImportedFileMessageHandlerTest extends TestCase
     {
         $invoice = InvoiceDto::create(
             invoiceNumber: 'INV123456',
-            invoiceType: '380',
+            invoiceType: 'Debit',
             totalBeforeTax: '1000.00',
             totalAfterTax: '1210.00',
             details: [
