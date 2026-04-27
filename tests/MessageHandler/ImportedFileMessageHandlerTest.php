@@ -6,6 +6,7 @@ namespace App\Tests\MessageHandler;
 
 use App\DataObject\Dtos\InvoiceDetailDto;
 use App\DataObject\Dtos\InvoiceDto;
+use App\Exception\MessagingException;
 use App\Message\ImportedFileMessage;
 use App\MessageHandler\ImportedFileMessageHandler;
 use App\DataObject\EdifactInvoicParseResult;
@@ -125,6 +126,28 @@ final class ImportedFileMessageHandlerTest extends TestCase
             );
 
         $handler = new ImportedFileMessageHandler($parser, $logger);
+        $handler(new ImportedFileMessage(self::INVOIC_FILE_PATH));
+    }
+
+    public function testItWrapsParsingFailuresInMessagingException(): void
+    {
+        $parser = $this->createMock(EdifactInvoicParserInterface::class);
+        $parser
+            ->expects(self::once())
+            ->method('parse')
+            ->with(self::INVOIC_FILE_PATH)
+            ->willThrowException(new \RuntimeException('parser failed'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger
+            ->expects(self::never())
+            ->method('info');
+
+        $handler = new ImportedFileMessageHandler($parser, $logger);
+
+        $this->expectException(MessagingException::class);
+        $this->expectExceptionMessage(self::INVOIC_FILE_PATH);
+
         $handler(new ImportedFileMessage(self::INVOIC_FILE_PATH));
     }
 }

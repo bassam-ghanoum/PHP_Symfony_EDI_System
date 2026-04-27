@@ -8,6 +8,7 @@ use App\DataObject\Dtos\InvoiceDto;
 use App\Entity\Dispatch;
 use App\Entity\IncomingFile;
 use App\Entity\Order;
+use App\Exception\InvoiceParsingException;
 use App\Parser\EdifactInvoicParser;
 use App\Repository\DispatchRepository;
 use App\Repository\IncomingFileRepository;
@@ -106,7 +107,7 @@ final class EdifactInvoicParserTest extends TestCase
 
     public function testItThrowsWhenTheImportedFileDoesNotExist(): void
     {
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(InvoiceParsingException::class);
         $this->expectExceptionMessage(self::IMPORTED_FILE_MESSAGE_FRAGMENT);
 
         $this->parser->parse($this->workspaceDirectory.\DIRECTORY_SEPARATOR.self::MISSING_FILE_NAME);

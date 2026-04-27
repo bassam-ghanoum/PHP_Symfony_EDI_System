@@ -6,11 +6,10 @@ namespace App\Service;
 
 use App\DataObject\Dtos\IncomingFileDto;
 use App\DataObject\ImportedFileProcessingResult;
-use App\DataObject\ImportedFileMoveResult;
-use App\Entity\IncomingFile;
+use App\Exception\FileImportException;
+use App\Exception\MessagingException;
 use App\Message\ImportedFileMessage;
 use App\Repository\IncomingFileRepository;
-use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -88,10 +87,10 @@ public function __invoke(): \Generator
                 $this->incomingFileRepository->save($incomingFileDto);
 
                 try {
-                    $this->messageBus->dispatch(new ImportedFileMessage($destinationPath));
-                } catch (\Throwable $e) {
+                    $this->dispatchImportedFileMessage($destinationPath);
+                } catch (MessagingException $exception) {
                     trigger_error(
-                        \sprintf('Failed to dispatch message for file "%s": %s', basename($destinationPath), $e->getMessage()),
+                        \sprintf('Failed to dispatch message for file "%s": %s', basename($destinationPath), $exception->getMessage()),
                         \E_USER_WARNING,
                     );
                 }
@@ -101,7 +100,7 @@ public function __invoke(): \Generator
                     fileName: basename($destinationPath),
                     status: 'success',
                 );
-            } catch (\InvalidArgumentException $exception) {
+            } catch (FileImportException $exception) {
                 yield new ImportedFileProcessingResult(
                     filePath: $sourcePath,
                     fileName: $filename,
@@ -109,8 +108,13 @@ public function __invoke(): \Generator
                     errorMessage: $exception->getMessage(),
                 );
             } catch (\Throwable $e) {
+                $fileImportException = new FileImportException(
+                    \sprintf('Failed to process file "%s".', $filename),
+                    previous: $e,
+                );
+
                 trigger_error(
-                    \sprintf('Failed to process file "%s": %s', $filename, $e->getMessage()),
+                    \sprintf('Failed to process file "%s": %s', $filename, $fileImportException->getPrevious()?->getMessage() ?? $fileImportException->getMessage()),
                     \E_USER_WARNING,
                 );
 
@@ -118,7 +122,7 @@ public function __invoke(): \Generator
                     filePath: $sourcePath,
                     fileName: $filename,
                     status: 'failed',
-                    errorMessage: $e->getMessage(),
+                    errorMessage: $fileImportException->getPrevious()?->getMessage() ?? $fileImportException->getMessage(),
                 );
             }
         }
@@ -132,7 +136,7 @@ public function __invoke(): \Generator
         $entries = scandir($directory);
 
         if ($entries === false) {
-            throw new IOException(\sprintf('Unable to read directory "%s".', $directory));
+            throw new FileImportException(\sprintf('Unable to read directory "%s".', $directory));
         }
 
         $files = [];
@@ -212,8 +216,20 @@ public function __invoke(): \Generator
     private function assertOriginalFilenameIsSafe(string $filename): void
     {
         if (preg_match(self::VALID_ORIGINAL_FILENAME_PATTERN, $filename) !== 1) {
-            throw new \InvalidArgumentException(
+            throw new FileImportException(
                 \sprintf('Original filename "%s" contains unsupported characters.', $filename),
+            );
+        }
+    }
+
+    private function dispatchImportedFileMessage(string $destinationPath): void
+    {
+        try {
+            $this->messageBus->dispatch(new ImportedFileMessage($destinationPath));
+        } catch (\Throwable $throwable) {
+            throw new MessagingException(
+                \sprintf('Unable to dispatch import message for "%s".', basename($destinationPath)),
+                previous: $throwable,
             );
         }
     }

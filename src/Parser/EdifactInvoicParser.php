@@ -6,6 +6,7 @@ namespace App\Parser;
 
 use App\DataObject\EdifactInvoicParseResult;
 use App\DataObject\Dtos\IncomingFileDto;
+use App\Exception\InvoiceParsingException;
 use App\Repository\IncomingFileRepository;
 use App\Service\InvoicePersistenceService;
 use App\Service\InvoiceParsingService;
@@ -17,6 +18,7 @@ final class EdifactInvoicParser implements EdifactInvoicParserInterface
     private const FILE_READ_ERROR_MESSAGE = 'Unable to read imported file "%s".';
     private const INCOMING_FILE_NOT_FOUND_MESSAGE = 'Incoming file record for "%s" was not found.';
     private const INCOMING_FILE_LOOKUP_FAILED_MESSAGE = 'Unable to resolve incoming file record for "%s".';
+    private const PARSING_FAILED_MESSAGE = 'Unable to parse imported file "%s".';
     private const NOT_INVOIC_MESSAGE = 'Imported file is not an EDIFACT INVOIC D96A message. Parsing stopped.';
     private const INVOIC_DETECTED_MESSAGE = 'EDIFACT INVOIC D96A message detected. Parsing process started.';
 
@@ -29,34 +31,43 @@ final class EdifactInvoicParser implements EdifactInvoicParserInterface
 
     public function parse(string $filePath): EdifactInvoicParseResult
     {
-        if (!is_file($filePath)) {
-            throw new \RuntimeException(\sprintf(self::FILE_NOT_FOUND_MESSAGE, $filePath));
-        }
+        try {
+            if (!is_file($filePath)) {
+                throw new InvoiceParsingException(\sprintf(self::FILE_NOT_FOUND_MESSAGE, $filePath));
+            }
 
-        $content = file_get_contents($filePath);
+            $content = file_get_contents($filePath);
 
-        if ($content === false) {
-            throw new \RuntimeException(\sprintf(self::FILE_READ_ERROR_MESSAGE, $filePath));
-        }
+            if ($content === false) {
+                throw new InvoiceParsingException(\sprintf(self::FILE_READ_ERROR_MESSAGE, $filePath));
+            }
 
-        if (!$this->isInvoicMessage($content)) {
+            if (!$this->isInvoicMessage($content)) {
+                return new EdifactInvoicParseResult(
+                    filePath: $filePath,
+                    isInvoic: false,
+                    message: self::NOT_INVOIC_MESSAGE,
+                );
+            }
+
+            $incomingFile = $this->resolveIncomingFile($filePath);
+            $invoice = $this->invoiceParsingService->parse($content, $incomingFile);
+            $this->invoicePersistenceService->save($invoice);
+
             return new EdifactInvoicParseResult(
                 filePath: $filePath,
-                isInvoic: false,
-                message: self::NOT_INVOIC_MESSAGE,
+                isInvoic: true,
+                message: self::INVOIC_DETECTED_MESSAGE,
+                invoice: $invoice,
+            );
+        } catch (InvoiceParsingException $exception) {
+            throw $exception;
+        } catch (\Throwable $throwable) {
+            throw new InvoiceParsingException(
+                \sprintf(self::PARSING_FAILED_MESSAGE, $filePath),
+                previous: $throwable,
             );
         }
-
-        $incomingFile = $this->resolveIncomingFile($filePath);
-        $invoice = $this->invoiceParsingService->parse($content, $incomingFile);
-        $this->invoicePersistenceService->save($invoice);
-
-        return new EdifactInvoicParseResult(
-            filePath: $filePath,
-            isInvoic: true,
-            message: self::INVOIC_DETECTED_MESSAGE,
-            invoice: $invoice,
-        );
     }
 
     private function isInvoicMessage(string $content): bool
@@ -74,14 +85,14 @@ final class EdifactInvoicParser implements EdifactInvoicParserInterface
             }
 
             if ($incomingFile === null || $incomingFile->getId() === null) {
-                throw new \RuntimeException(\sprintf(self::INCOMING_FILE_NOT_FOUND_MESSAGE, $filePath));
+                throw new InvoiceParsingException(\sprintf(self::INCOMING_FILE_NOT_FOUND_MESSAGE, $filePath));
             }
 
             return IncomingFileDto::fromEntity($incomingFile);
-        } catch (\RuntimeException $exception) {
+        } catch (InvoiceParsingException $exception) {
             throw $exception;
         } catch (\Throwable $throwable) {
-            throw new \RuntimeException(
+            throw new InvoiceParsingException(
                 \sprintf(self::INCOMING_FILE_LOOKUP_FAILED_MESSAGE, $filePath),
                 previous: $throwable,
             );
