@@ -30,3 +30,23 @@
 /assets/
 /translations/
 ###< ignore assets and translations ###
+
+###> IDE & Editor files ###
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*~
+.DS_Store
+Thumbs.db
+.phpstorm.metadata.php
+*.sublime-workspace
+###< IDE & Editor files ###
+
+###> Local development ###
+/bin/phpunit
+composer.phar
+.php-cs-fixer.cache
+.phpstan.cache
+###< Local development ###
