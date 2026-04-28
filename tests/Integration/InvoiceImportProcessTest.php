@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
-use App\DataObject\Dtos\IncomingFileDto;
-use App\DataObject\Dtos\InvoiceDto;
+use App\DataObject\Dto\IncomingFileDto;
+use App\DataObject\Dto\InvoiceDto;
 use App\Entity\Dispatch;
 use App\Entity\IncomingFile;
 use App\Entity\Invoice;

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\DataObject\Dtos\InvoiceDetailDto;
-use App\DataObject\Dtos\IncomingFileDto;
-use App\DataObject\Dtos\InvoiceDto;
+use App\DataObject\Dto\InvoiceDetailDto;
+use App\DataObject\Dto\IncomingFileDto;
+use App\DataObject\Dto\InvoiceDto;
 use App\Parser\EdifactInvoicSegmentMap;
 use App\Repository\OrderRepository;
 use App\Repository\DispatchRepository;

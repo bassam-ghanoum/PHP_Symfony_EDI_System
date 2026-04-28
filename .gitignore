@@ -49,4 +49,11 @@ Thumbs.db
 composer.phar
 .php-cs-fixer.cache
 .phpstan.cache
+.editorconfig
+.env.dev
+compose.override.yaml
+compose.yaml
+importmap.php
+phpunit.dist.xml
+symfony.lock
 ###< Local development ###

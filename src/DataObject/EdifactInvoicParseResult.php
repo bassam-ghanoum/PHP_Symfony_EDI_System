@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\DataObject;
 
-use App\DataObject\Dtos\InvoiceDto;
+use App\DataObject\Dto\InvoiceDto;
 
 final class EdifactInvoicParseResult
 {

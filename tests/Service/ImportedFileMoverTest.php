@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service;
 
-use App\DataObject\Dtos\IncomingFileDto;
+use App\DataObject\Dto\IncomingFileDto;
 use App\DataObject\ImportedFileProcessingResult;
 use App\Entity\IncomingFile;
 use App\Message\ImportedFileMessage;

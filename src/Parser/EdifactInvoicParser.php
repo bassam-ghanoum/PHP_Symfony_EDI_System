@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Parser;
 
 use App\DataObject\EdifactInvoicParseResult;
-use App\DataObject\Dtos\IncomingFileDto;
+use App\DataObject\Dto\IncomingFileDto;
 use App\Exception\InvoiceParsingException;
 use App\Repository\IncomingFileRepository;
 use App\Service\InvoicePersistenceService;

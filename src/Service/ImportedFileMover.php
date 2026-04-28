@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\DataObject\Dtos\IncomingFileDto;
+use App\DataObject\Dto\IncomingFileDto;
 use App\DataObject\ImportedFileProcessingResult;
 use App\Exception\FileImportException;
 use App\Exception\MessagingException;

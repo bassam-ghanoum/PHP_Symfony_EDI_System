@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\DataObject\Dtos;
+namespace App\DataObject\Dto;
 
 use App\Entity\IncomingFile;
 

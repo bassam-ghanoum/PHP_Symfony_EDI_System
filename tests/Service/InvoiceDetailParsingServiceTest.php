@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service;
 
-use App\DataObject\Dtos\InvoiceDetailDto;
-use App\DataObject\Dtos\IncomingFileDto;
+use App\DataObject\Dto\InvoiceDetailDto;
+use App\DataObject\Dto\IncomingFileDto;
 use App\Repository\DispatchRepository;
 use App\Repository\OrderRepository;
 use App\Service\InvoiceParsingService;

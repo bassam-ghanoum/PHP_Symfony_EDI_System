@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Parser;
 
-use App\DataObject\Dtos\InvoiceDto;
+use App\DataObject\Dto\InvoiceDto;
 use App\Entity\Dispatch;
 use App\Entity\IncomingFile;
 use App\Entity\Order;

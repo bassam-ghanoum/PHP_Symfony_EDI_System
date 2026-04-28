@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service;
 
-use App\DataObject\Dtos\InvoiceDetailDto;
-use App\DataObject\Dtos\IncomingFileDto;
-use App\DataObject\Dtos\InvoiceDto;
+use App\DataObject\Dto\InvoiceDetailDto;
+use App\DataObject\Dto\IncomingFileDto;
+use App\DataObject\Dto\InvoiceDto;
 use App\Entity\Dispatch;
 use App\Entity\Order;
 use App\Repository\DispatchRepository;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\MessageHandler;
 
-use App\DataObject\Dtos\InvoiceDetailDto;
-use App\DataObject\Dtos\InvoiceDto;
+use App\DataObject\Dto\InvoiceDetailDto;
+use App\DataObject\Dto\InvoiceDto;
 use App\Exception\MessagingException;
 use App\Message\ImportedFileMessage;
 use App\MessageHandler\ImportedFileMessageHandler;

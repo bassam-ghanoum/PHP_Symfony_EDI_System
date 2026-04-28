@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\DataObject\Dtos\InvoiceDto;
+use App\DataObject\Dto\InvoiceDto;
 use App\Entity\Invoice;
 use App\Repository\InvoiceDetailRepository;
 use App\Repository\InvoiceRepository;
