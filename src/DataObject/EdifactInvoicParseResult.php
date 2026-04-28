@@ -6,7 +6,7 @@ namespace App\DataObject;
 
 use App\DataObject\Dto\InvoiceDto;
 
-final class EdifactInvoicParseResult
+final readonly class EdifactInvoicParseResult
 {
     public function __construct(
         public string $filePath,

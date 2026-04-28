@@ -13,7 +13,10 @@ final class HomeControllerTest extends WebTestCase
     private const CONTENT_TYPE_HEADER = 'content-type';
     private const HTML_CONTENT_TYPE = 'text/html; charset=UTF-8';
     private const MAIN_HEADING_SELECTOR = 'h1';
-    private const WELCOME_HEADING = 'Welcome to the EDI system.';
+    private const WELCOME_HEADING = 'Welcome to the EDI System';
+    private const SUBTITLE_SELECTOR = '.subtitle';
+    private const SUBTITLE_TEXT = 'Electronic Data Interchange Platform';
+    private const FEATURES_SELECTOR = '.feature';
 
     public function testHomePageIsAvailableViaGet(): void
     {
@@ -22,6 +25,32 @@ final class HomeControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertResponseHeaderSame(self::CONTENT_TYPE_HEADER, self::HTML_CONTENT_TYPE);
+    }
+
+    public function testHomePageContainsWelcomeHeading(): void
+    {
+        $client = static::createClient();
+        $client->request(self::GET_METHOD, self::HOME_ROUTE_PATH);
+
         self::assertSelectorTextContains(self::MAIN_HEADING_SELECTOR, self::WELCOME_HEADING);
+    }
+
+    public function testHomePageContainsSubtitle(): void
+    {
+        $client = static::createClient();
+        $client->request(self::GET_METHOD, self::HOME_ROUTE_PATH);
+
+        self::assertSelectorTextContains(self::SUBTITLE_SELECTOR, self::SUBTITLE_TEXT);
+    }
+
+    public function testHomePageDisplaysFeatures(): void
+    {
+        $client = static::createClient();
+        $client->request(self::GET_METHOD, self::HOME_ROUTE_PATH);
+
+        $crawler = $client->getCrawler();
+        $features = $crawler->filter(self::FEATURES_SELECTOR);
+
+        self::assertGreaterThan(0, $features->count());
     }
 }

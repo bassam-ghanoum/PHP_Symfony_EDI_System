@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\DataObject\Dto;
 
 /**
- * @psalm-immutable
+ * Immutable data transfer object for invoice data.
+ * Use the create() factory method or constructor to instantiate.
  */
 final class InvoiceDto
 {
@@ -13,17 +14,17 @@ final class InvoiceDto
      * @param InvoiceDetailDto[] $details
      */
     public function __construct(
-        public ?string $invoiceNumber = null,
-        public ?int $orderId = null,
-        public ?int $dispatchId = null,
-        public ?string $invoiceType = null,
-        public ?string $totalBeforeTax = null,
-        public ?string $totalAfterTax = null,
-        public ?string $taxType = null,
-        public ?string $taxAmount = null,
-        public ?IncomingFileDto $incomingFile = null,
-        public ?\DateTimeImmutable $fileReceivedDate = null,
-        public array $details = [],
+        public readonly ?string $invoiceNumber = null,
+        public readonly ?int $orderId = null,
+        public readonly ?int $dispatchId = null,
+        public readonly ?string $invoiceType = null,
+        public readonly ?string $totalBeforeTax = null,
+        public readonly ?string $totalAfterTax = null,
+        public readonly ?string $taxType = null,
+        public readonly ?string $taxAmount = null,
+        public readonly ?IncomingFileDto $incomingFile = null,
+        public readonly ?\DateTimeImmutable $fileReceivedDate = null,
+        public readonly array $details = [],
     ) {
     }
 
