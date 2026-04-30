@@ -49,6 +49,7 @@ final class InvoiceParsingService
 
     public function parse(string $content, IncomingFileDto $incomingFile): ?InvoiceDto
     {
+        $content = $this->normalizeContent($content);
         $lines = $this->extractSegments($content);
         
         if (empty($lines)) {
@@ -56,6 +57,7 @@ final class InvoiceParsingService
         }
 
         $invoiceData = $this->extractInvoiceHeader($lines);
+        $invoiceData = $this->extractInvoiceFooter($lines, $invoiceData);
         $invoiceDetails = $this->extractInvoiceDetails($lines);
 
         // Look up actual order record by order_number
@@ -90,6 +92,16 @@ final class InvoiceParsingService
         );
     }
 
+    private function normalizeContent(string $content): string
+    {
+        // Remove UNA segment if present and normalize line endings
+        if (substr($content, 0, self::UNA_LENGTH) === 'UNA') {
+            $content = substr($content, self::UNA_LENGTH);
+        }
+
+        return str_replace(["'\r\n", "'\r", "'\n"], self::SEGMENT_DELIMITER, $content);
+    }
+
     /**
      * @return string[]
      */
@@ -108,26 +120,20 @@ final class InvoiceParsingService
             static fn ($segment) => $segment !== ''
         );
     }
-
+    
     /**
      * @return array<string, mixed>
      */
     private function extractInvoiceHeader(array $segments): array
     {
-        $data = [
-            'invoiceNumber' => null,
-            'invoiceType' => null,
-            'orderNumber' => null,
-            'dispatchNumber' => null,
-            'totalBeforeTax' => null,
-            'totalAfterTax' => null,
-            'taxType' => null,
-            'taxAmount' => null,
-        ];
-
+        $data = $this->initializeInvoiceData();
         foreach ($segments as $segment) {
             $elements = explode(self::ELEMENT_SEPARATOR, $segment);
             $tag = $elements[0] ?? '';
+
+            if ($tag === EdifactInvoicSegmentMap::SEGMENT_UNS) {
+                break;
+            }
 
             if ($tag === EdifactInvoicSegmentMap::SEGMENT_BGM) {
                 $typeCode = $elements[EdifactInvoicSegmentMap::BGM_INVOICE_TYPE_CODE_POSITION] ?? null;
@@ -138,6 +144,44 @@ final class InvoiceParsingService
                 };
                 $data['invoiceNumber'] = $elements[EdifactInvoicSegmentMap::BGM_INVOICE_NUMBER_POSITION] ?? null;
             }
+
+            if ($tag === EdifactInvoicSegmentMap::SEGMENT_RFF) {
+                $reference = $elements[EdifactInvoicSegmentMap::RFF_REFERENCE_POSITION] ?? '';
+                if ($reference) {
+                    $components = explode(self::COMPONENT_SEPARATOR, $reference);
+                    $refType = $components[0] ?? '';
+                    $refValue = $components[1] ?? '';
+                    
+                    if (
+                        $refType === EdifactInvoicSegmentMap::RFF_ORDER_REFERENCE
+                        || $refType === EdifactInvoicSegmentMap::RFF_ORDER_REFERENCE_ALT_2
+                        || $refType === EdifactInvoicSegmentMap::RFF_ORDER_REFERENCE_ALT
+                    ) {
+                        $data['orderNumber'] = is_numeric($refValue) ? (int) $refValue : null;
+                    } elseif ($refType === EdifactInvoicSegmentMap::RFF_DESPATCH_REFERENCE) {
+                        $data['dispatchNumber'] = is_numeric($refValue) ? (int) $refValue : null;
+                    }
+                }
+            }
+        }
+
+        return $data;
+    }
+
+
+    /**
+     * @param string[] $segments 
+     * @param array<string, mixed> $data
+     * 
+     * @return array<string, mixed>
+     */
+    private function extractInvoiceFooter(array $segments, array $data): array
+    {
+        //remove all $segments before UNS segment, as they are part of header and line items, and we only want to process footer segments here
+        $segments = array_slice($segments, intval(array_search(EdifactInvoicSegmentMap::SEGMENT_UNS, array_column($segments, 0))));
+        foreach ($segments as $segment) {
+            $elements = explode(self::ELEMENT_SEPARATOR, $segment);
+            $tag = $elements[0] ?? '';
 
             if ($tag === EdifactInvoicSegmentMap::SEGMENT_MOA) {
                 $amount = $elements[EdifactInvoicSegmentMap::MOA_AMOUNT_POSITION] ?? '';
@@ -179,24 +223,26 @@ final class InvoiceParsingService
                     $data['taxType'] = $elements[2];
                 }
             }
-
-            if ($tag === EdifactInvoicSegmentMap::SEGMENT_RFF) {
-                $reference = $elements[EdifactInvoicSegmentMap::RFF_REFERENCE_POSITION] ?? '';
-                if ($reference) {
-                    $components = explode(self::COMPONENT_SEPARATOR, $reference);
-                    $refType = $components[0] ?? '';
-                    $refValue = $components[1] ?? '';
-                    
-                    if ($refType === EdifactInvoicSegmentMap::RFF_ORDER_REFERENCE) {
-                        $data['orderNumber'] = is_numeric($refValue) ? (int) $refValue : null;
-                    } elseif ($refType === EdifactInvoicSegmentMap::RFF_DESPATCH_REFERENCE) {
-                        $data['dispatchNumber'] = is_numeric($refValue) ? (int) $refValue : null;
-                    }
-                }
-            }
         }
 
         return $data;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function initializeInvoiceData(): array
+    {
+        return [
+            'invoiceNumber' => null,
+            'invoiceType' => null,
+            'orderNumber' => null,
+            'dispatchNumber' => null,
+            'totalBeforeTax' => null,
+            'totalAfterTax' => null,
+            'taxType' => null,
+            'taxAmount' => null,
+        ];
     }
 
     /**
@@ -210,6 +256,10 @@ final class InvoiceParsingService
         foreach ($segments as $segment) {
             $elements = explode(self::ELEMENT_SEPARATOR, $segment);
             $tag = $elements[0] ?? '';
+
+            if ($tag === EdifactInvoicSegmentMap::SEGMENT_UNS) {
+                break;
+            }
 
             if ($tag === EdifactInvoicSegmentMap::SEGMENT_LIN) {
                 if ($currentLineItem !== null) {
@@ -244,6 +294,22 @@ final class InvoiceParsingService
             }
 
             if ($currentLineItem !== null) {
+                if ($tag === EdifactInvoicSegmentMap::SEGMENT_PIA) {
+                    $itemCode = $this->extractItemCodeFromPia($elements);
+
+                    if ($itemCode !== '') {
+                        $currentLineItem['itemCode'] = $itemCode;
+                    }
+                }
+
+                if ($tag === EdifactInvoicSegmentMap::SEGMENT_IMD) {
+                    $itemDescription = $this->extractItemDescriptionFromImd($elements);
+
+                    if ($itemDescription !== null && $currentLineItem['itemDescription'] === null) {
+                        $currentLineItem['itemDescription'] = $itemDescription;
+                    }
+                }
+
                 if ($tag === EdifactInvoicSegmentMap::SEGMENT_QTY) {
                     $quantity = $elements[EdifactInvoicSegmentMap::SEGMENT_DATA_POSITION] ?? '';
                     if ($quantity) {
@@ -279,13 +345,14 @@ final class InvoiceParsingService
                             || $moaType === EdifactInvoicSegmentMap::MOA_TYPE_TOTAL_INCL_TAX_ALT
                         ) {
                             $currentLineItem['totalAfterTax'] = $this->formatDecimal($moaAmount);
-                        } elseif ($moaType === EdifactInvoicSegmentMap::MOA_TYPE_TOTAL_EXCL_TAX) {
+                        } elseif (
+                            $moaType === EdifactInvoicSegmentMap::MOA_TYPE_TOTAL_EXCL_TAX
+                            || $moaType === EdifactInvoicSegmentMap::MOA_TYPE_LINE_ITEM_AMOUNT
+                        ) {
                             $currentLineItem['totalBeforeTax'] = $this->formatDecimal($moaAmount);
                         }
                     }
                 }
-
-                // Add more detail extraction as needed (e.g., IMD for item description)
             }
         }
 
@@ -328,5 +395,44 @@ final class InvoiceParsingService
         // Extract the first component
         $components = explode(self::COMPONENT_SEPARATOR, $itemCodeString);
         return $components[0] ?? '';
+    }
+
+    /**
+     * @param string[] $elements
+     */
+    private function extractItemCodeFromPia(array $elements): string
+    {
+        $qualifier = $elements[EdifactInvoicSegmentMap::SEGMENT_TYPE_POSITION] ?? '';
+        $value = $elements[EdifactInvoicSegmentMap::SEGMENT_VALUE_POSITION] ?? '';
+
+        if (
+            $qualifier !== EdifactInvoicSegmentMap::PIA_PRIMARY_ITEM_ID
+            && $qualifier !== EdifactInvoicSegmentMap::PIA_ADDITIONAL_ITEM_ID
+        ) {
+            return '';
+        }
+
+        return $this->extractItemCode($value);
+    }
+
+    /**
+     * @param string[] $elements
+     */
+    private function extractItemDescriptionFromImd(array $elements): ?string
+    {
+        $descriptionElement = $elements[EdifactInvoicSegmentMap::IMD_DESCRIPTION_POSITION] ?? '';
+
+        if ($descriptionElement === '') {
+            return null;
+        }
+
+        $components = explode(self::COMPONENT_SEPARATOR, $descriptionElement);
+        $description = trim((string) end($components));
+
+        if ($description === '' || str_contains($description, '?:')) {
+            return null;
+        }
+
+        return $description;
     }
 }

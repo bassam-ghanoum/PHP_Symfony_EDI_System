@@ -11,6 +11,8 @@ final class EdifactInvoicSegmentMap
     public const SEGMENT_TAX = 'TAX';
     public const SEGMENT_RFF = 'RFF';
     public const SEGMENT_LIN = 'LIN';
+    public const SEGMENT_PIA = 'PIA';
+    public const SEGMENT_IMD = 'IMD';
     public const SEGMENT_QTY = 'QTY';
     public const SEGMENT_PRI = 'PRI';
 
@@ -27,6 +29,7 @@ final class EdifactInvoicSegmentMap
     public const MOA_TYPE_TOTAL_INCL_TAX = '9';
     public const MOA_TYPE_TOTAL_INCL_TAX_ALT = '129';
     public const MOA_TYPE_TAX_AMOUNT = '124';
+    public const MOA_TYPE_LINE_ITEM_AMOUNT = '203';
     public const MOA_TYPE_TOTAL_NET = '125';
     public const MOA_TYPE_AMOUNT_ALT = '77';
 
@@ -37,11 +40,22 @@ final class EdifactInvoicSegmentMap
 
     public const LIN_ITEM_NUMBER_POSITION = 2;
     public const SEGMENT_DATA_POSITION = 1;
+    public const SEGMENT_TYPE_POSITION = 1;
+    public const SEGMENT_VALUE_POSITION = 2;
+
+    public const PIA_PRIMARY_ITEM_ID = '1';
+    public const PIA_ADDITIONAL_ITEM_ID = '5';
+
+    public const IMD_DESCRIPTION_POSITION = 3;
 
     public const RFF_REFERENCE_POSITION = 1;
     public const RFF_ORDER_REFERENCE = 'ON';
+    public const RFF_ORDER_REFERENCE_ALT_2 = 'AP';
+    public const RFF_ORDER_REFERENCE_ALT = 'API';
     public const RFF_DESPATCH_REFERENCE = 'DQ';
     public const RFF_INVOICE_REFERENCE = 'IV';
     public const RFF_VENDOR_REFERENCE = 'VN';
     public const RFF_VAT_REFERENCE = 'VA';
+
+    public const SEGMENT_UNS = 'UNS';
 }

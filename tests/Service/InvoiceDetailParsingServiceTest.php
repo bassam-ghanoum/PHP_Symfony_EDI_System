@@ -65,6 +65,32 @@ final class InvoiceDetailParsingServiceTest extends TestCase
         self::assertSame('302.50', $secondDetail->totalAfterTax);
     }
 
+    public function testItParsesLineItemsFromPiaImdAndMoa203(): void
+    {
+        $content = "UNA:+.? '\nUNH+1+INVOIC:D:96A:UN'\nBGM+380+9021568808'\nLIN+1'\nPIA+1+19:SA'\nPIA+5+2007130:SA'\nIMD+F++:::PostNord MyPack Collect'\nIMD+F++:::Sending_Country?:SE'\nQTY+47:1:PCE'\nMOA+203:10'\nPRI+AAA:10::::PCE'\nLIN+2'\nPIA+1+68:SA'\nPIA+5+1001091:SA'\nIMD+F++:::Notification by SMS'\nQTY+47:1:PCE'\nMOA+203:0'\nPRI+AAA:0::::PCE'\nUNT+16+1'";
+
+        $invoice = $this->invoiceParsingService->parse($content, $this->createIncomingFileDto());
+
+        self::assertNotNull($invoice);
+        self::assertCount(2, $invoice->details);
+
+        /** @var InvoiceDetailDto $firstDetail */
+        $firstDetail = $invoice->details[0];
+        self::assertSame('2007130', $firstDetail->itemCode);
+        self::assertSame('PostNord MyPack Collect', $firstDetail->itemDescription);
+        self::assertSame(1, $firstDetail->quantity);
+        self::assertSame('10', $firstDetail->unitPrice);
+        self::assertSame('10', $firstDetail->totalBeforeTax);
+
+        /** @var InvoiceDetailDto $secondDetail */
+        $secondDetail = $invoice->details[1];
+        self::assertSame('1001091', $secondDetail->itemCode);
+        self::assertSame('Notification by SMS', $secondDetail->itemDescription);
+        self::assertSame(1, $secondDetail->quantity);
+        self::assertSame(null, $secondDetail->unitPrice);
+        self::assertSame(null, $secondDetail->totalBeforeTax);
+    }
+
     private function createIncomingFileDto(): IncomingFileDto
     {
         return new IncomingFileDto(

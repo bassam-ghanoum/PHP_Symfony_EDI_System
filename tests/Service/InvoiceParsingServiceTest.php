@@ -17,7 +17,8 @@ use PHPUnit\Framework\TestCase;
 final class InvoiceParsingServiceTest extends TestCase
 {
     private const EDI_EXAMPLE_FILE = __DIR__.'/edi_file_example/invoice.edi';
-    
+    private const EDI_EXAMPLE_FILE_2 = __DIR__.'/edi_file_example/invoice_2.edi';
+
     private InvoiceParsingService $invoiceParsingService;
     private OrderRepository $orderRepository;
     private DispatchRepository $dispatchRepository;
@@ -106,7 +107,7 @@ final class InvoiceParsingServiceTest extends TestCase
         self::assertNotNull($invoice);
         // Invoice header
         self::assertSame('18871152', $invoice->invoiceNumber);
-        self::assertSame('Debit', $invoice->invoiceType);
+        self::assertSame('Credit', $invoice->invoiceType);
         self::assertSame('VAT', $invoice->taxType);
         self::assertSame('25.00', $invoice->totalBeforeTax);
         self::assertSame('29.75', $invoice->totalAfterTax);
@@ -125,6 +126,34 @@ final class InvoiceParsingServiceTest extends TestCase
         self::assertSame('100100', $lineItem->itemCode);
         self::assertSame(1, $lineItem->quantity);
         self::assertSame('35.00', $lineItem->unitPrice);
+    }
+
+    public function testItParsesInvoiceTotalsAndDescriptions(): void
+    {
+        $content = file_get_contents(self::EDI_EXAMPLE_FILE_2);
+
+        $invoice = $this->invoiceParsingService->parse($content, $this->createIncomingFileDto());
+
+        self::assertNotNull($invoice);
+        self::assertSame('0004028750', $invoice->invoiceNumber);
+        self::assertSame('Debit', $invoice->invoiceType);
+        self::assertSame('45544.79', $invoice->totalBeforeTax);
+        self::assertSame('56930.99', $invoice->totalAfterTax);
+        self::assertSame('11386.2', $invoice->taxAmount);
+        self::assertCount(2, $invoice->details);
+
+        /** @var InvoiceDetailDto $firstDetail */
+        $firstDetail = $invoice->details[0];
+        self::assertSame('2007360', $firstDetail->itemCode);
+        self::assertSame('Cons Brev AO NO', $firstDetail->itemDescription);
+        self::assertSame('2370.39', $firstDetail->totalBeforeTax);
+
+        /** @var InvoiceDetailDto $secondDetail */
+        $secondDetail = $invoice->details[1];
+        self::assertSame('2007642', $secondDetail->itemCode);
+        self::assertSame(16865, $secondDetail->quantity);
+        self::assertSame('2.56', $secondDetail->unitPrice);
+        self::assertSame('43174.4', $secondDetail->totalBeforeTax);
     }
 
     private function configureReferenceRepositories(): void
