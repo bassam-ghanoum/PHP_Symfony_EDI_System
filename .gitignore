@@ -8,6 +8,8 @@
 /public/bundles/
 /var/
 /vendor/
+/.phpstan.neon
+/.gitignore
 ###< symfony/framework-bundle ###
 
 ###> phpunit/phpunit ###
