@@ -48,12 +48,12 @@ The system extracts and stores:
 
 2. **Install dependencies** (if first time):
    ```bash
-   docker compose exec edi_system composer install
+   docker compose exec system_environment composer install
    ```
 
 3. **Run database migrations**:
    ```bash
-   docker compose exec edi_system php bin/console doctrine:migrations:migrate
+   docker compose exec system_environment php bin/console doctrine:migrations:migrate
    ```
 
 4. **Access the application**:
@@ -67,7 +67,7 @@ The system extracts and stores:
 1. **Place EDIFACT files** in the `ImportedFiles/input/` directory
 2. **Run the import command**:
    ```bash
-   docker compose exec edi_system php bin/console app:imported-files:move
+   docker compose exec system_environment php bin/console app:imported-files:move
    ```
 3. The system will:
    - Parse each EDIFACT invoice file
@@ -90,7 +90,7 @@ Access the home page at http://localhost:8080 to:
 
 ### Run Tests
 ```bash
-docker compose exec edi_system php bin/phpunit
+docker compose exec system_environment php bin/phpunit
 ```
 
 ### Access Database
@@ -101,7 +101,7 @@ docker compose exec edi_system php bin/phpunit
 
 **Using command line**:
 ```bash
-docker compose exec edi_mysql mysql -u root -p
+docker compose exec mysql_environment mysql -u root -p
 ```
 
 ## Directory Structure
@@ -139,7 +139,7 @@ Key entities:
 ### Files Not Importing
 - Check that files are in `ImportedFiles/input/` directory
 - Verify files are valid EDIFACT INVOIC D96A format
-- Check application logs: `docker compose logs edi_system`
+- Check application logs: `docker compose logs system_environment`
 
 ### Database Connection Issues
 - Verify `.env` credentials match your configuration
@@ -148,12 +148,12 @@ Key entities:
 
 ### Permission Issues
 - Ensure proper file permissions on `ImportedFiles/` directory
-- Run: `docker compose exec edi_system chown -R www-data:www-data ImportedFiles/`
+- Run: `docker compose exec system_environment chown -R www-data:www-data ImportedFiles/`
 
 ## Configuration
 Modify `.env` file in the project root to override settings:
 ```
-DATABASE_URL=mysql://user:password@edi_mysql:3306/edi
+DATABASE_URL=mysql://user:password@mysql_environment:3306/edi
 ```
 
 ## Performance Considerations
