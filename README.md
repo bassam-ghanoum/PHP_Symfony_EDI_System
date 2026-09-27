@@ -48,12 +48,12 @@ The system extracts and stores:
 
 2. **Install dependencies** (if first time):
    ```bash
-   docker compose exec system_environment composer install
+   docker exec system_environment composer install
    ```
 
 3. **Run database migrations**:
    ```bash
-   docker compose exec system_environment php bin/console doctrine:migrations:migrate
+   docker exec system_environment php bin/console doctrine:migrations:migrate
    ```
 
 4. **Access the application**:
@@ -67,7 +67,7 @@ The system extracts and stores:
 1. **Place EDIFACT files** in the `ImportedFiles/input/` directory
 2. **Run the import command**:
    ```bash
-   docker compose exec system_environment php bin/console app:imported-files:move
+   docker exec system_environment php bin/console app:imported-files:move
    ```
 3. The system will:
    - Parse each EDIFACT invoice file
@@ -90,7 +90,7 @@ Access the home page at http://localhost:8080 to:
 
 ### Run Tests
 ```bash
-docker compose exec system_environment php bin/phpunit
+docker exec system_environment php bin/phpunit
 ```
 
 ### Access Database
@@ -101,7 +101,7 @@ docker compose exec system_environment php bin/phpunit
 
 **Using command line**:
 ```bash
-docker compose exec mysql_environment mysql -u root -p
+docker exec mysql_environment mysql -u root -p
 ```
 
 ## Directory Structure
@@ -148,7 +148,7 @@ Key entities:
 
 ### Permission Issues
 - Ensure proper file permissions on `ImportedFiles/` directory
-- Run: `docker compose exec system_environment chown -R www-data:www-data ImportedFiles/`
+- Run: `docker exec system_environment chown -R www-data:www-data ImportedFiles/`
 
 ## Configuration
 Modify `.env` file in the project root to override settings:
