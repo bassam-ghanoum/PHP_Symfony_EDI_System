@@ -242,6 +242,50 @@ final class ImportedFileMoverTest extends TestCase
         self::assertFileDoesNotExist($inputDirectory.\DIRECTORY_SEPARATOR.self::EDI_SOURCE_FILENAME);
     }
 
+    public function testItMovesFileToErrorDirectoryWhenMessageDispatchFails(): void
+    {
+        $filesystem = new Filesystem();
+        $inputDirectory = $this->workspaceDirectory.\DIRECTORY_SEPARATOR.self::INPUT_DIRECTORY_NAME;
+        $errorDirectory = $this->workspaceDirectory.\DIRECTORY_SEPARATOR.'error';
+
+        $filesystem->mkdir($inputDirectory);
+        file_put_contents($inputDirectory.\DIRECTORY_SEPARATOR.self::EDI_SOURCE_FILENAME, self::EDI_CONTENT);
+
+        $incomingFileRepository = $this->createMock(IncomingFileRepository::class);
+        $incomingFileRepository
+            ->expects(self::once())
+            ->method('save')
+            ->with(self::isInstanceOf(IncomingFileDto::class))
+            ->willReturn(new IncomingFile());
+
+        $messageBus = $this->createMock(MessageBusInterface::class);
+        $messageBus
+            ->expects(self::once())
+            ->method('dispatch')
+            ->willThrowException(new \RuntimeException('transport unavailable'));
+
+        $mover = new ImportedFileMover(
+            filesystem: $filesystem,
+            messageBus: $messageBus,
+            incomingFileRepository: $incomingFileRepository,
+            baseDirectory: $this->workspaceDirectory,
+        );
+
+        $results = iterator_to_array(($mover)());
+        /** @var list<ImportedFileProcessingResult> $failedResults */
+        $failedResults = array_values(array_filter(
+            $results,
+            static fn (ImportedFileProcessingResult $result) => $result->status === 'failed',
+        ));
+
+        self::assertCount(2, $results);
+        self::assertCount(1, $failedResults);
+        self::assertStringContainsString('Unable to dispatch import message', (string) $failedResults[0]->errorMessage);
+        self::assertDirectoryExists($errorDirectory);
+        self::assertFileExists($errorDirectory.\DIRECTORY_SEPARATOR.$failedResults[0]->fileName);
+        self::assertFileDoesNotExist($this->workspaceDirectory.\DIRECTORY_SEPARATOR.self::IMPORTED_DIRECTORY_NAME.\DIRECTORY_SEPARATOR.$failedResults[0]->fileName);
+    }
+
     public function testItCreatesMissingDirectoriesWhenTheyDoNotExist(): void
     {
         $incomingFileRepository = $this->createMock(IncomingFileRepository::class);

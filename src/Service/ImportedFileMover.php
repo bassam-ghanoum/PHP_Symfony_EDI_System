@@ -17,6 +17,7 @@ final class ImportedFileMover
 {
     private const INPUT_DIRECTORY_NAME = 'input';
     private const IMPORTED_DIRECTORY_NAME = 'imported';
+    private const ERROR_DIRECTORY_NAME = 'error';
     private const IMPORTED_FILE_STATUS = 'imported';
     private const PENDING_IMPORT_STATUS = 'pending_import';
     private const TIMESTAMP_FORMAT = 'Ymd_His';
@@ -89,10 +90,16 @@ public function __invoke(): \Generator
                 try {
                     $this->dispatchImportedFileMessage($destinationPath);
                 } catch (MessagingException $exception) {
-                    trigger_error(
-                        \sprintf('Failed to dispatch message for file "%s": %s', basename($destinationPath), $exception->getMessage()),
-                        \E_USER_WARNING,
+                    $errorPath = $this->moveFileToErrorDirectory($destinationPath);
+
+                    yield new ImportedFileProcessingResult(
+                        filePath: $errorPath,
+                        fileName: basename($errorPath),
+                        status: 'failed',
+                        errorMessage: $exception->getMessage(),
                     );
+
+                    continue;
                 }
 
                 yield new ImportedFileProcessingResult(
@@ -256,6 +263,17 @@ public function __invoke(): \Generator
             $destinationPath = $directory.\DIRECTORY_SEPARATOR.$candidate;
             ++$counter;
         } while (is_file($destinationPath));
+
+        return $destinationPath;
+    }
+
+    private function moveFileToErrorDirectory(string $filePath): string
+    {
+        $errorDirectory = $this->baseDirectory.DIRECTORY_SEPARATOR.self::ERROR_DIRECTORY_NAME;
+        $this->filesystem->mkdir($errorDirectory);
+
+        $destinationPath = $this->buildUniqueDestinationPath($errorDirectory, basename($filePath));
+        $this->filesystem->rename($filePath, $destinationPath);
 
         return $destinationPath;
     }

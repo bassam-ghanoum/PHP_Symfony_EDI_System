@@ -64,16 +64,31 @@ The system extracts and stores:
 
 ### Importing Invoice Files
 
-1. **Place EDIFACT files** in the `ImportedFiles/input/` directory
-2. **Run the import command**:
+To try the bundled invoice end to end, first apply the migration and load the fixture SQL into your development database. In phpMyAdmin (`http://localhost:8081`), select the application database, choose **Import**, select `app/fixtures/initial_data.sql`, and execute it. The inserts are safe to re-run and do not clear existing data.
+
+From the repository root, copy the sample into the watched input directory:
+
+```powershell
+Copy-Item .\app\fixtures\sample_invoice.edi .\app\ImportedFiles\input\sample_invoice.edi
+```
+
+Then queue it for processing:
+
    ```bash
    docker exec system_environment php bin/console app:imported-files:move
    ```
-3. The system will:
-   - Parse each EDIFACT invoice file
-   - Extract invoice data
-   - Store in the database
-   - Move processed files to `ImportedFiles/imported/` directory
+
+That command moves the file and queues it; it does not parse it synchronously. Process the queued invoice with:
+
+```bash
+docker exec system_environment php bin/console messenger:consume async --limit=1 -vv
+```
+
+Check phpMyAdmin for invoice `FIXTURE-INV-001`. It should have totals `25.00` before tax, `30.00` after tax, tax `5.00`, and non-null order and dispatch links. Its invoice detail should have quantity `2`, unit price `12.50`, and line total `25.00`.
+
+The current importer does not yet associate parsed line item codes with `item` records, so the imported invoice detail's `item_id` remains null even though the fixture includes a matching product and item.
+
+For normal imports, place `.edi` or `.txt` files in `ImportedFiles/input/`, run `app:imported-files:move`, then run a Messenger `async` consumer. Processed files are moved to `ImportedFiles/imported/`.
 
 ### Supported File Format
 
