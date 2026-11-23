@@ -95,7 +95,7 @@ final class InvoiceDetailParsingServiceTest extends TestCase
     {
         return new IncomingFileDto(
             id: 1,
-            fileName: '/ImportedFiles/imported/sample_invoice.edi',
+            fileName: '/tests/files/test_invoice.edi',
         );
     }
 }

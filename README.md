@@ -84,7 +84,7 @@ That command moves the file and queues it; it does not parse it synchronously. P
 docker exec system_environment php bin/console messenger:consume async --limit=1 -vv
 ```
 
-Check phpMyAdmin for invoice `FIXTURE-INV-001`. It should have totals `25.00` before tax, `30.00` after tax, tax `5.00`, and non-null order and dispatch links. Its invoice detail should have quantity `2`, unit price `12.50`, and line total `25.00`.
+Check phpMyAdmin for invoice `FIXTURE-INV-001`.
 
 The current importer does not yet associate parsed line item codes with `item` records, so the imported invoice detail's `item_id` remains null even though the fixture includes a matching product and item.
 
